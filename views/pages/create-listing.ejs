@@ -1,42 +1,57 @@
 <%- include('../partials/header') %>
 <section class="container section">
-  <h1>Create a listing</h1>
-  <p>Share your item with the marketplace. Listings appear instantly.</p>
+  <div class="section-header">
+    <div>
+      <h1>Create a listing</h1>
+      <p class="muted">Share your item with the marketplace. Listings appear instantly.</p>
+    </div>
+  </div>
   <% if (error) { %>
     <div class="error"><%= error %></div>
   <% } %>
-  <form class="form-card" method="POST" action="/listings">
+  <form class="form-card" method="POST" action="/listings" enctype="multipart/form-data">
     <label>
       Title
-      <input type="text" name="title" required />
+      <input type="text" name="title" value="<%= form?.title || '' %>" required />
     </label>
     <label>
       Description
-      <textarea name="description" rows="4" required></textarea>
+      <textarea name="description" rows="4" required><%= form?.description || '' %></textarea>
     </label>
     <div class="form-row">
       <label>
         Price (USD)
-        <input type="number" name="price" step="0.01" required />
+        <input type="number" name="price" step="0.01" min="1" value="<%= form?.price || '' %>" required />
       </label>
       <label>
         Category
-        <input type="text" name="category" required />
+        <select name="category" required>
+          <option value="">Select a category</option>
+          <% categories.forEach(category => { %>
+            <option value="<%= category %>" <%= form?.category === category ? 'selected' : '' %>><%= category %></option>
+          <% }) %>
+        </select>
       </label>
     </div>
     <div class="form-row">
       <label>
         Condition
-        <input type="text" name="condition" required />
+        <select name="condition" required>
+          <option value="">Select condition</option>
+          <% conditions.forEach(condition => { %>
+            <option value="<%= condition %>" <%= form?.condition === condition ? 'selected' : '' %>><%= condition %></option>
+          <% }) %>
+        </select>
       </label>
       <label>
-        Image URL
-        <input type="url" name="imageUrl" required />
+        Listing image
+        <input type="file" name="image" accept="image/*" required />
+        <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
       </label>
     </div>
     <label>
       Shipping Details
-      <textarea name="shippingDetails" rows="3" required></textarea>
+      <textarea name="shippingDetails" rows="3" required><%= form?.shippingDetails || '' %></textarea>
     </label>
     <button class="button primary" type="submit">Publish Listing</button>
   </form>

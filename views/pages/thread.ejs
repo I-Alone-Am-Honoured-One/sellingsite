@@ -7,7 +7,7 @@
     </div>
     <a class="link" href="/messages">Back to inbox</a>
   </div>
-  <div class="thread-body">
+  <div class="thread-body" id="threadBody">
     <% messages.forEach(message => { %>
       <div class="message <%= message.sender_id === currentUser.id ? 'own' : '' %>">
         <p><%= message.body %></p>
@@ -20,4 +20,11 @@
     <button class="button primary" type="submit">Send</button>
   </form>
 </section>
+
+<script>
+  const threadBody = document.getElementById('threadBody');
+  if (threadBody) {
+    threadBody.scrollTop = threadBody.scrollHeight;
+  }
+</script>
 <%- include('../partials/footer') %>

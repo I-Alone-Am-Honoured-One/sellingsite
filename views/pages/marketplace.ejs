@@ -3,25 +3,66 @@
   <div class="section-header">
     <div>
       <h1>Marketplace</h1>
-      <p>Browse verified listings and message sellers instantly.</p>
+      <p class="muted">Browse verified listings and message sellers instantly.</p>
     </div>
     <% if (!locals.currentUser) { %>
       <div class="notice">Sign in to buy or message sellers.</div>
     <% } %>
   </div>
-  <form class="search-bar" method="GET" action="/marketplace">
-    <input type="text" name="search" placeholder="Search listings" value="<%= search %>" />
-    <button class="button primary" type="submit">Search</button>
+
+  <div class="category-grid compact">
+    <% categories.forEach(category => { %>
+      <a class="category-card mini <%= selectedCategory === category ? 'active' : '' %>" href="/marketplace?category=<%= encodeURIComponent(category) %>">
+        <h3><%= category %></h3>
+      </a>
+    <% }) %>
+  </div>
+
+  <form class="filters" method="GET" action="/marketplace">
+    <div class="search-bar">
+      <input type="text" name="search" placeholder="Search listings" value="<%= search %>" />
+      <select name="category">
+        <option value="">All categories</option>
+        <% categories.forEach(category => { %>
+          <option value="<%= category %>" <%= selectedCategory === category ? 'selected' : '' %>><%= category %></option>
+        <% }) %>
+      </select>
+      <select name="condition">
+        <option value="">All conditions</option>
+        <% conditions.forEach(condition => { %>
+          <option value="<%= condition %>" <%= selectedCondition === condition ? 'selected' : '' %>><%= condition %></option>
+        <% }) %>
+      </select>
+      <button class="button primary" type="submit">Filter</button>
+    </div>
+    <div class="chip-row">
+      <% if (selectedCategory) { %>
+        <a class="chip" href="/marketplace?search=<%= encodeURIComponent(search) %>&condition=<%= encodeURIComponent(selectedCondition || '') %>">Category: <%= selectedCategory %> ✕</a>
+      <% } %>
+      <% if (selectedCondition) { %>
+        <a class="chip" href="/marketplace?search=<%= encodeURIComponent(search) %>&category=<%= encodeURIComponent(selectedCategory || '') %>">Condition: <%= selectedCondition %> ✕</a>
+      <% } %>
+    </div>
   </form>
+
   <div class="card-grid">
+    <% if (!listings.length) { %>
+      <div class="empty-state">
+        <h3>No listings found</h3>
+        <p>Try adjusting your filters or search for another item.</p>
+        <a class="button ghost" href="/marketplace">Clear filters</a>
+      </div>
+    <% } %>
     <% listings.forEach(listing => { %>
       <a class="card" href="/listings/<%= listing.id %>">
         <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
         <div class="card-body">
-          <h3><%= listing.title %></h3>
+          <div class="card-title">
+            <h3><%= listing.title %></h3>
+            <span class="badge ghost"><%= listing.condition %></span>
+          </div>
           <p class="price"><%= formatPrice(listing.price_cents) %></p>
-          <p class="meta"><%= listing.category %> · <%= listing.condition %></p>
-          <p class="meta">Seller: <%= listing.seller_name %></p>
+          <p class="meta"><%= listing.category %> · Seller: <%= listing.seller_name %></p>
         </div>
       </a>
     <% }) %>

@@ -1,0 +1,56 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Your profile</h1>
+      <p class="muted">Manage your account, avatar, and marketplace stats.</p>
+    </div>
+  </div>
+
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+  <% if (success) { %>
+    <div class="success"><%= success %></div>
+  <% } %>
+
+  <div class="profile-grid">
+    <div class="profile-card">
+      <div class="profile-avatar">
+        <% if (user.avatar_url) { %>
+          <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
+        <% } else { %>
+          <span><%= user.username.slice(0, 1).toUpperCase() %></span>
+        <% } %>
+      </div>
+      <div>
+        <h2><%= user.username %></h2>
+        <p class="muted"><%= user.email %></p>
+      </div>
+      <div class="stats-row">
+        <div>
+          <h3><%= listingCount %></h3>
+          <p>Listings</p>
+        </div>
+        <div>
+          <h3><%= orderCount %></h3>
+          <p>Orders</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <h3>Update avatar</h3>
+      <p class="muted">Upload a new image to personalize your profile.</p>
+      <form class="form-card" method="POST" action="/profile/avatar" enctype="multipart/form-data">
+        <label>
+          Avatar image
+          <input type="file" name="avatar" accept="image/*" required />
+          <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
+        </label>
+        <button class="button primary" type="submit">Upload avatar</button>
+      </form>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

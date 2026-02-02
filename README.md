@@ -1,28 +1,49 @@
-# SafeSwap Marketplace
+# NeonSwap Marketplace
 
 ## Product pitch
-SafeSwap is a buyer-to-buyer marketplace inspired by Eneba + Vinted that protects every transaction through escrow-style payments. Buyers pay through the platform, sellers ship quickly, and buyers have a 24‑hour confirmation window after delivery to confirm or dispute the order—automatic release happens after the window closes.
-
-This MVP focuses on trust, transparency, and speed: real-time messaging between buyers and sellers, clear order statuses, and simple listing creation so anyone can start selling in minutes.
+NeonSwap is a gamer-first marketplace with escrow-style protection. Buyers pay through the platform, sellers ship quickly, and buyers have a 24‑hour confirmation window after delivery to confirm or dispute the order—automatic release happens after the window closes.
 
 ## Feature list
 ### MVP (implemented)
 - User registration + sign-in with hashed passwords and JWT session cookies.
-- Landing page with “About” steps, new listings, and CTA to marketplace.
-- Marketplace browsing + search.
+- Dark-mode, neon marketplace UI with reusable layout + component styles.
+- Landing page with hero, categories, stats, testimonials, FAQ, and multiple listing sections.
+- Marketplace browsing + search + category/condition filters.
 - Listing details with buy + message actions.
-- Create listing flow with title, description, price, category, condition, image URL, and shipping details.
+- Create listing flow with category + condition dropdowns and image uploads.
 - Order lifecycle: PAID → SHIPPED → DELIVERED → CONFIRMED / DISPUTED.
 - Seller order actions (mark shipped, add tracking, mark delivered).
 - Buyer order actions (confirm received, report issue).
 - 24‑hour auto-confirm rule after delivery.
 - Messaging inbox, 1:1 threads, unread indicator, chat view.
+- Profile + settings pages with avatar uploads and notification preferences.
+- Health check route for Render (`/healthz`).
 
 ### Nice-to-have
 - Stripe payment integration instead of mock purchase.
-- File upload for listing images.
 - Dispute resolution dashboard for admins.
 - Push/email notifications on order status changes.
+
+## Required environment variables
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `CLOUDINARY_CLOUD_NAME` (optional for uploads)
+- `CLOUDINARY_API_KEY` (optional for uploads)
+- `CLOUDINARY_API_SECRET` (optional for uploads)
+- `DATABASE_SSL` (optional, set to `true` when needed)
+
+## Local development
+1. Configure the database and run `db/schema.sql`.
+2. Apply migrations in `db/migrations` as needed.
+3. Install dependencies: `npm install`.
+4. Start the server: `npm run dev`.
+5. Visit `http://localhost:3000`.
+
+## Render deployment
+1. Set `DATABASE_URL`, `JWT_SECRET`, and Cloudinary vars in Render.
+2. Ensure `DATABASE_SSL=true` if your database requires SSL.
+3. Use `npm install` then `npm start` as the build/start commands.
+4. Render can use `/healthz` for health checks.
 
 ## Database schema
 ### users
@@ -30,6 +51,9 @@ This MVP focuses on trust, transparency, and speed: real-time messaging between 
 - username (unique)
 - email (unique)
 - password_hash
+- avatar_url
+- notification_enabled
+- marketing_enabled
 - created_at
 
 ### listings
@@ -103,26 +127,19 @@ This MVP focuses on trust, transparency, and speed: real-time messaging between 
 - GET /messages/:id
 - POST /messages/:id
 
-### Landing
-- GET /
+### Profile + settings
+- GET /profile
+- POST /profile/avatar
+- GET /settings
+- POST /settings
 
-## Page list + UI flow
-1. Landing → Marketplace CTA → Marketplace browse/search → Listing detail.
-2. Listing detail → Buy now → Order detail (buyer) → Confirm/dispute.
-3. Listing detail → Message seller → Inbox thread → Chat.
-4. Create listing → New listing appears on landing + marketplace.
-5. Orders page: buyer/seller tabs for all order states.
+### Health
+- GET /healthz
 
-## Security basics
-- Validation on required fields + numeric price.
-- Auth guard on protected pages/actions.
-- Passwords hashed with bcrypt.
-- JWT stored in HTTP-only cookie.
-- Suggested: rate limit login endpoints and add CSRF protection for production.
-
-## Step-by-step build plan
-1. Configure database + run `db/schema.sql`.
-2. Set environment variables (`DATABASE_URL`, `JWT_SECRET`).
-3. Install dependencies: `npm install`.
-4. Start the server: `npm run dev`.
-5. Register users, create listings, and test order + messaging flows.
+## Quick test checklist
+- Register and sign in.
+- Upload an avatar from the profile page.
+- Create a listing with an image upload.
+- Message a seller and verify unread count in inbox.
+- Buy a listing and update order status.
+- Confirm delivery and see status timeline updates.

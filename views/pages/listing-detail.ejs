@@ -1,27 +1,38 @@
 <%- include('../partials/header') %>
 <section class="container section">
   <div class="detail-grid">
-    <div>
+    <div class="detail-card">
       <img class="detail-image" src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+      <div class="detail-tags">
+        <span class="badge accent"><%= listing.category %></span>
+        <span class="badge ghost"><%= listing.condition %></span>
+      </div>
     </div>
     <div>
       <h1><%= listing.title %></h1>
       <p class="price large"><%= formatPrice(listing.price_cents) %></p>
-      <p class="meta">Category: <%= listing.category %> · Condition: <%= listing.condition %></p>
-      <p><%= listing.description %></p>
+      <p class="meta">Listed by <%= listing.seller_name %></p>
+      <p class="description"><%= listing.description %></p>
       <div class="info-box">
-        <h4>Seller</h4>
-        <p><%= listing.seller_name %></p>
-        <p class="meta">Ships: <%= listing.shipping_details %></p>
+        <h4>Shipping details</h4>
+        <p><%= listing.shipping_details %></p>
+      </div>
+      <div class="info-box">
+        <h4>Buyer protection</h4>
+        <p>Escrow holds funds until delivery is confirmed or auto-confirmed after 24 hours.</p>
       </div>
       <div class="action-row">
         <% if (currentUser) { %>
-          <form method="POST" action="/listings/<%= listing.id %>/buy">
-            <button class="button primary" type="submit">Buy now</button>
-          </form>
-          <form method="POST" action="/listings/<%= listing.id %>/message">
-            <button class="button ghost" type="submit">Message seller</button>
-          </form>
+          <% if (currentUser.id === listing.seller_id) { %>
+            <div class="notice">You can’t purchase your own listing.</div>
+          <% } else { %>
+            <form method="POST" action="/listings/<%= listing.id %>/buy">
+              <button class="button primary" type="submit">Buy now</button>
+            </form>
+            <form method="POST" action="/listings/<%= listing.id %>/message">
+              <button class="button ghost" type="submit">Message seller</button>
+            </form>
+          <% } %>
         <% } else { %>
           <a class="button primary" href="/auth/sign-in">Sign in to buy</a>
           <a class="button ghost" href="/auth/sign-in">Sign in to message</a>

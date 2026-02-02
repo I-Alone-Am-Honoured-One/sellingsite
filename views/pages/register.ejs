@@ -1,7 +1,11 @@
 <%- include('../partials/header') %>
 <section class="container section narrow">
-  <h1>Create your account</h1>
-  <p>Join SafeSwap to buy, sell, and message securely.</p>
+  <div class="section-header">
+    <div>
+      <h1>Create your account</h1>
+      <p class="muted">Join NeonSwap to buy, sell, and message securely.</p>
+    </div>
+  </div>
   <% if (error) { %>
     <div class="error"><%= error %></div>
   <% } %>
@@ -17,6 +21,7 @@
     <label>
       Password
       <input type="password" name="password" required />
+      <span class="helper">Use at least 8 characters.</span>
     </label>
     <button class="button primary" type="submit">Register</button>
   </form>
