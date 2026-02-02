@@ -1,0 +1,23 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="thread-header">
+    <div>
+      <h1><%= thread.listing_title || 'Conversation' %></h1>
+      <p class="meta">Buyer: <%= thread.buyer_name %> · Seller: <%= thread.seller_name %></p>
+    </div>
+    <a class="link" href="/messages">Back to inbox</a>
+  </div>
+  <div class="thread-body">
+    <% messages.forEach(message => { %>
+      <div class="message <%= message.sender_id === currentUser.id ? 'own' : '' %>">
+        <p><%= message.body %></p>
+        <span><%= message.sender_name %> · <%= new Date(message.created_at).toLocaleString() %></span>
+      </div>
+    <% }) %>
+  </div>
+  <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
+    <input type="text" name="body" placeholder="Type your message" required />
+    <button class="button primary" type="submit">Send</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>

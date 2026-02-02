@@ -1,0 +1,20 @@
+<%- include('../partials/header') %>
+<section class="container section narrow">
+  <h1>Sign in</h1>
+  <p>Access your orders, listings, and inbox.</p>
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+  <form class="form-card" method="POST" action="/auth/sign-in">
+    <label>
+      Email
+      <input type="email" name="email" required />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" required />
+    </label>
+    <button class="button primary" type="submit">Sign in</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>

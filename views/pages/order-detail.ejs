@@ -1,0 +1,61 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="detail-grid">
+    <div>
+      <img class="detail-image" src="<%= order.image_url %>" alt="<%= order.title %>" />
+    </div>
+    <div>
+      <h1>Order #<%= order.id %></h1>
+      <p class="meta">Listing: <%= order.title %></p>
+      <p class="price"><%= formatPrice(order.price_cents) %></p>
+      <div class="status-box">
+        <h3>Status: <span class="status"><%= order.status %></span></h3>
+        <ul>
+          <li>Paid: <%= order.paid_at ? new Date(order.paid_at).toLocaleString() : 'Pending' %></li>
+          <li>Shipped: <%= order.shipped_at ? new Date(order.shipped_at).toLocaleString() : 'Pending' %></li>
+          <li>Delivered: <%= order.delivered_at ? new Date(order.delivered_at).toLocaleString() : 'Pending' %></li>
+          <li>Confirmed: <%= order.confirmed_at ? new Date(order.confirmed_at).toLocaleString() : 'Pending' %></li>
+          <li>Disputed: <%= order.disputed_at ? new Date(order.disputed_at).toLocaleString() : 'None' %></li>
+        </ul>
+      </div>
+      <div class="info-box">
+        <h4>Participants</h4>
+        <p>Buyer: <%= order.buyer_name %></p>
+        <p>Seller: <%= order.seller_name %></p>
+        <p>Shipping: <%= order.shipping_details %></p>
+        <% if (order.tracking_code) { %>
+          <p>Tracking: <%= order.tracking_code %></p>
+        <% } %>
+      </div>
+      <% if (currentUser.id === order.seller_id) { %>
+        <div class="action-column">
+          <form method="POST" action="/orders/<%= order.id %>/ship" class="form-card">
+            <label>
+              Tracking number (or write No tracking)
+              <input type="text" name="trackingCode" placeholder="Tracking number" />
+            </label>
+            <button class="button primary" type="submit">Mark as shipped</button>
+          </form>
+          <form method="POST" action="/orders/<%= order.id %>/deliver">
+            <button class="button ghost" type="submit">Mark as delivered</button>
+          </form>
+        </div>
+      <% } %>
+      <% if (currentUser.id === order.buyer_id) { %>
+        <div class="action-column">
+          <form method="POST" action="/orders/<%= order.id %>/confirm">
+            <button class="button primary" type="submit" <%= order.status !== 'DELIVERED' ? 'disabled' : '' %>>Confirm received</button>
+          </form>
+          <form method="POST" action="/orders/<%= order.id %>/dispute">
+            <button class="button ghost" type="submit" <%= order.status !== 'DELIVERED' ? 'disabled' : '' %>>Report issue</button>
+          </form>
+          <% if (remainingMs !== null) { %>
+            <p class="muted">Time left to confirm: <%= Math.ceil(remainingMs / 3600000) %> hours.</p>
+          <% } %>
+        </div>
+      <% } %>
+      <a class="link" href="/messages">View messages</a>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

@@ -1,0 +1,30 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Marketplace</h1>
+      <p>Browse verified listings and message sellers instantly.</p>
+    </div>
+    <% if (!locals.currentUser) { %>
+      <div class="notice">Sign in to buy or message sellers.</div>
+    <% } %>
+  </div>
+  <form class="search-bar" method="GET" action="/marketplace">
+    <input type="text" name="search" placeholder="Search listings" value="<%= search %>" />
+    <button class="button primary" type="submit">Search</button>
+  </form>
+  <div class="card-grid">
+    <% listings.forEach(listing => { %>
+      <a class="card" href="/listings/<%= listing.id %>">
+        <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+        <div class="card-body">
+          <h3><%= listing.title %></h3>
+          <p class="price"><%= formatPrice(listing.price_cents) %></p>
+          <p class="meta"><%= listing.category %> · <%= listing.condition %></p>
+          <p class="meta">Seller: <%= listing.seller_name %></p>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+</section>
+<%- include('../partials/footer') %>

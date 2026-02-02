@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafeSwap Marketplace</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-content">
+      <a class="logo" href="/">SafeSwap</a>
+      <nav class="nav-links">
+        <a href="/marketplace">Marketplace</a>
+        <% if (locals.currentUser) { %>
+          <a href="/listings/new">Create Listing</a>
+          <a href="/orders">Orders</a>
+          <a href="/messages">Inbox</a>
+        <% } %>
+      </nav>
+      <div class="auth-links">
+        <% if (locals.currentUser) { %>
+          <span class="user-tag">Hi, <%= currentUser.username %></span>
+          <form method="POST" action="/auth/logout">
+            <button class="link-button" type="submit">Log out</button>
+          </form>
+        <% } else { %>
+          <a href="/auth/sign-in">Sign in</a>
+          <a class="button ghost" href="/auth/register">Register</a>
+        <% } %>
+      </div>
+    </div>
+  </header>
+  <main>
