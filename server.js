@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
+const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const { query } = require('./db');
@@ -13,6 +14,15 @@ const { query } = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
+const RESET_CODE_TTL_MINUTES = 15;
+const isProduction = process.env.NODE_ENV === 'production';
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: isProduction,
+  maxAge: 7 * 24 * 60 * 60 * 1000
+};
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
@@ -88,6 +98,45 @@ function isValidEmail(email) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 }
 
+function generateResetCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function getResetCodeExpiry() {
+  return new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
+}
+
+function createMailer() {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return null;
+  }
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+}
+
+async function sendResetEmail({ email, code }) {
+  const transporter = createMailer();
+  if (!transporter) {
+    const error = new Error('Email service is not configured.');
+    error.status = 500;
+    throw error;
+  }
+  await transporter.sendMail({
+    from: EMAIL_FROM,
+    to: email,
+    subject: 'NeonSwap password reset code',
+    text: `Your NeonSwap reset code is ${code}. It expires in ${RESET_CODE_TTL_MINUTES} minutes.`,
+    html: `<p>Your NeonSwap reset code is <strong>${code}</strong>. It expires in ${RESET_CODE_TTL_MINUTES} minutes.</p>`
+  });
+}
+
 async function uploadImage(file) {
   if (!file) {
     return null;
@@ -134,6 +183,7 @@ async function hydrateUser(req, res, next) {
     res.locals.currentUser = rows[0] || null;
   } catch (error) {
     res.locals.currentUser = null;
+    res.clearCookie('session', COOKIE_OPTIONS);
   }
   return next();
 }
@@ -374,7 +424,9 @@ app.get('/auth/register', (req, res) => {
 app.post(
   '/auth/register',
   asyncHandler(async (req, res) => {
-    const { username, email, password } = req.body;
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password;
     if (!username || !email || !password) {
       return res.render('pages/register', { error: 'All fields are required.' });
     }
@@ -391,7 +443,7 @@ app.post(
         [username, email, passwordHash]
       );
       const token = createToken(rows[0]);
-      res.cookie('session', token, { httpOnly: true, sameSite: 'lax' });
+      res.cookie('session', token, COOKIE_OPTIONS);
       return res.redirect('/');
     } catch (error) {
       return res.render('pages/register', { error: 'Username or email already in use.' });
@@ -406,7 +458,8 @@ app.get('/auth/sign-in', (req, res) => {
 app.post(
   '/auth/sign-in',
   asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password;
     if (!email || !password) {
       return res.render('pages/sign-in', { error: 'Email and password required.' });
     }
@@ -420,15 +473,110 @@ app.post(
       return res.render('pages/sign-in', { error: 'Invalid credentials.' });
     }
     const token = createToken(user);
-    res.cookie('session', token, { httpOnly: true, sameSite: 'lax' });
+    res.cookie('session', token, COOKIE_OPTIONS);
     return res.redirect('/');
   })
 );
 
 app.post('/auth/logout', (req, res) => {
-  res.clearCookie('session');
+  res.clearCookie('session', COOKIE_OPTIONS);
   res.redirect('/');
 });
+
+app.get('/auth/forgot-password', (req, res) => {
+  res.render('pages/forgot-password', { error: null, success: null });
+});
+
+app.post(
+  '/auth/forgot-password',
+  asyncHandler(async (req, res) => {
+    const email = (req.body.email || '').trim().toLowerCase();
+    if (!email || !isValidEmail(email)) {
+      return res.render('pages/forgot-password', { error: 'Please enter a valid email.', success: null });
+    }
+    const { rows } = await query('SELECT id, email FROM users WHERE email = $1', [email]);
+    const user = rows[0];
+    if (user) {
+      const code = generateResetCode();
+      const codeHash = await bcrypt.hash(code, 10);
+      await query('UPDATE password_reset_codes SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL', [
+        user.id
+      ]);
+      await query(
+        `INSERT INTO password_reset_codes (user_id, code_hash, expires_at)
+         VALUES ($1, $2, $3)`,
+        [user.id, codeHash, getResetCodeExpiry()]
+      );
+      await sendResetEmail({ email: user.email, code });
+    }
+    return res.render('pages/forgot-password', {
+      error: null,
+      success: 'If that email exists, we sent a 6-digit reset code.'
+    });
+  })
+);
+
+app.get('/auth/reset-password', (req, res) => {
+  res.render('pages/reset-password', { error: null, success: null, email: req.query.email || '' });
+});
+
+app.post(
+  '/auth/reset-password',
+  asyncHandler(async (req, res) => {
+    const email = (req.body.email || '').trim().toLowerCase();
+    const code = (req.body.code || '').trim();
+    const password = req.body.password;
+    const confirmPassword = req.body.confirmPassword;
+    if (!email || !isValidEmail(email)) {
+      return res.render('pages/reset-password', { error: 'Please enter a valid email.', success: null, email });
+    }
+    if (!code || !/^\d{6}$/.test(code)) {
+      return res.render('pages/reset-password', { error: 'Enter the 6-digit code from your email.', success: null, email });
+    }
+    if (!password || password.length < 8) {
+      return res.render('pages/reset-password', {
+        error: 'Password must be at least 8 characters.',
+        success: null,
+        email
+      });
+    }
+    if (password !== confirmPassword) {
+      return res.render('pages/reset-password', { error: 'Passwords do not match.', success: null, email });
+    }
+    const { rows } = await query('SELECT id FROM users WHERE email = $1', [email]);
+    const user = rows[0];
+    if (!user) {
+      return res.render('pages/reset-password', { error: 'Invalid reset details.', success: null, email });
+    }
+    const { rows: codeRows } = await query(
+      `SELECT id, code_hash, expires_at
+       FROM password_reset_codes
+       WHERE user_id = $1 AND used_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.id]
+    );
+    const resetRow = codeRows[0];
+    if (!resetRow) {
+      return res.render('pages/reset-password', { error: 'Reset code is invalid or expired.', success: null, email });
+    }
+    if (resetRow.expires_at && new Date(resetRow.expires_at).getTime() < Date.now()) {
+      return res.render('pages/reset-password', { error: 'Reset code is expired.', success: null, email });
+    }
+    const codeValid = await bcrypt.compare(code, resetRow.code_hash);
+    if (!codeValid) {
+      return res.render('pages/reset-password', { error: 'Reset code is invalid.', success: null, email });
+    }
+    const newHash = await bcrypt.hash(password, 10);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
+    await query('UPDATE password_reset_codes SET used_at = NOW() WHERE id = $1', [resetRow.id]);
+    return res.render('pages/reset-password', {
+      error: null,
+      success: 'Password updated. You can now sign in.',
+      email
+    });
+  })
+);
 
 async function autoConfirmExpiredOrders(userId) {
   await query(
@@ -827,7 +975,7 @@ app.post(
     }
 
     if (action === 'email') {
-      const { email } = req.body;
+      const email = (req.body.email || '').trim().toLowerCase();
       if (!email || !isValidEmail(email)) {
         error = 'Please enter a valid email.';
       } else {

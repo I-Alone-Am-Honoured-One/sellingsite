@@ -543,6 +543,15 @@ img {
   color: #bbf7d0;
 }
 
+.form-footer {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.form-footer a {
+  color: var(--accent);
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
