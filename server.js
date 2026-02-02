@@ -12,6 +12,7 @@ const streamifier = require('streamifier');
 const { query } = require('./db');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
@@ -20,8 +21,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: 'lax',
-  secure: isProduction,
-  maxAge: 7 * 24 * 60 * 60 * 1000
+  secure: true, // REQUIRED on Render
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/'
 };
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
