@@ -1,41 +1,85 @@
 <%- include('../partials/header') %>
 <section class="container section">
-  <h1>Your Orders</h1>
-  <div class="two-column">
+  <div class="section-header">
     <div>
-      <h2>Purchases</h2>
-      <% if (buyerOrders.length === 0) { %>
-        <p class="muted">No purchases yet.</p>
-      <% } %>
-      <% buyerOrders.forEach(order => { %>
-        <a class="order-card" href="/orders/<%= order.id %>">
-          <img src="<%= order.image_url %>" alt="<%= order.title %>" />
-          <div>
-            <h3><%= order.title %></h3>
-            <p class="meta">Seller: <%= order.seller_name %></p>
-            <p class="meta">Status: <span class="status"><%= order.status %></span></p>
-          </div>
-          <div class="price"><%= formatPrice(order.price_cents) %></div>
-        </a>
-      <% }) %>
-    </div>
-    <div>
-      <h2>Sales</h2>
-      <% if (sellerOrders.length === 0) { %>
-        <p class="muted">No sales yet.</p>
-      <% } %>
-      <% sellerOrders.forEach(order => { %>
-        <a class="order-card" href="/orders/<%= order.id %>">
-          <img src="<%= order.image_url %>" alt="<%= order.title %>" />
-          <div>
-            <h3><%= order.title %></h3>
-            <p class="meta">Buyer: <%= order.buyer_name %></p>
-            <p class="meta">Status: <span class="status"><%= order.status %></span></p>
-          </div>
-          <div class="price"><%= formatPrice(order.price_cents) %></div>
-        </a>
-      <% }) %>
+      <h1>Orders dashboard</h1>
+      <p class="muted">Track purchases and sales in one place.</p>
     </div>
   </div>
+
+  <div class="tabs" data-tabs>
+    <button class="tab active" data-tab="buying" type="button">Buying</button>
+    <button class="tab" data-tab="selling" type="button">Selling</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-buying">
+    <% if (buyerOrders.length === 0) { %>
+      <div class="empty-state">
+        <h3>No purchases yet</h3>
+        <p>Browse the marketplace and secure your next drop.</p>
+        <a class="button ghost" href="/marketplace">Explore listings</a>
+      </div>
+    <% } %>
+    <% buyerOrders.forEach(order => { %>
+      <a class="order-card" href="/orders/<%= order.id %>">
+        <img src="<%= order.image_url %>" alt="<%= order.title %>" />
+        <div class="order-info">
+          <h3><%= order.title %></h3>
+          <p class="meta">Seller: <%= order.seller_name %></p>
+          <div class="status-row">
+            <span class="status-badge <%= order.status.toLowerCase() %>"><%= order.status %></span>
+            <span class="meta">Escrow protected</span>
+          </div>
+        </div>
+        <div class="order-meta">
+          <div class="price"><%= formatPrice(order.price_cents) %></div>
+          <span class="link">View order</span>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+
+  <div class="tab-panel" id="tab-selling">
+    <% if (sellerOrders.length === 0) { %>
+      <div class="empty-state">
+        <h3>No sales yet</h3>
+        <p>Create a listing to start selling to the community.</p>
+        <a class="button ghost" href="/listings/new">Create listing</a>
+      </div>
+    <% } %>
+    <% sellerOrders.forEach(order => { %>
+      <a class="order-card" href="/orders/<%= order.id %>">
+        <img src="<%= order.image_url %>" alt="<%= order.title %>" />
+        <div class="order-info">
+          <h3><%= order.title %></h3>
+          <p class="meta">Buyer: <%= order.buyer_name %></p>
+          <div class="status-row">
+            <span class="status-badge <%= order.status.toLowerCase() %>"><%= order.status %></span>
+            <span class="meta">Awaiting next action</span>
+          </div>
+        </div>
+        <div class="order-meta">
+          <div class="price"><%= formatPrice(order.price_cents) %></div>
+          <span class="link">View order</span>
+        </div>
+      </a>
+    <% }) %>
+  </div>
 </section>
+
+<script>
+  const tabs = document.querySelectorAll('[data-tabs] .tab');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(btn => btn.classList.remove('active'));
+      panels.forEach(panel => panel.classList.remove('active'));
+      tab.classList.add('active');
+      const target = document.getElementById(`tab-${tab.dataset.tab}`);
+      if (target) {
+        target.classList.add('active');
+      }
+    });
+  });
+</script>
 <%- include('../partials/footer') %>

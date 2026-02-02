@@ -3,35 +3,54 @@
   <div class="detail-grid">
     <div>
       <img class="detail-image" src="<%= order.image_url %>" alt="<%= order.title %>" />
+      <div class="detail-tags">
+        <span class="badge ghost">Order #<%= order.id %></span>
+        <span class="status-badge <%= order.status.toLowerCase() %>"><%= order.status %></span>
+      </div>
     </div>
     <div>
-      <h1>Order #<%= order.id %></h1>
-      <p class="meta">Listing: <%= order.title %></p>
+      <h1><%= order.title %></h1>
       <p class="price"><%= formatPrice(order.price_cents) %></p>
-      <div class="status-box">
-        <h3>Status: <span class="status"><%= order.status %></span></h3>
-        <ul>
-          <li>Paid: <%= order.paid_at ? new Date(order.paid_at).toLocaleString() : 'Pending' %></li>
-          <li>Shipped: <%= order.shipped_at ? new Date(order.shipped_at).toLocaleString() : 'Pending' %></li>
-          <li>Delivered: <%= order.delivered_at ? new Date(order.delivered_at).toLocaleString() : 'Pending' %></li>
-          <li>Confirmed: <%= order.confirmed_at ? new Date(order.confirmed_at).toLocaleString() : 'Pending' %></li>
-          <li>Disputed: <%= order.disputed_at ? new Date(order.disputed_at).toLocaleString() : 'None' %></li>
-        </ul>
+      <p class="meta">Buyer: <%= order.buyer_name %> · Seller: <%= order.seller_name %></p>
+
+      <div class="timeline">
+        <div class="timeline-step <%= order.paid_at ? 'complete' : '' %>">
+          <span>Paid</span>
+          <p><%= order.paid_at ? new Date(order.paid_at).toLocaleString() : 'Pending' %></p>
+        </div>
+        <div class="timeline-step <%= order.shipped_at ? 'complete' : '' %>">
+          <span>Shipped</span>
+          <p><%= order.shipped_at ? new Date(order.shipped_at).toLocaleString() : 'Pending' %></p>
+        </div>
+        <div class="timeline-step <%= order.delivered_at ? 'complete' : '' %>">
+          <span>Delivered</span>
+          <p><%= order.delivered_at ? new Date(order.delivered_at).toLocaleString() : 'Pending' %></p>
+        </div>
+        <div class="timeline-step <%= order.confirmed_at ? 'complete' : order.status === 'DISPUTED' ? 'warning' : '' %>">
+          <span><%= order.status === 'DISPUTED' ? 'Disputed' : 'Confirmed' %></span>
+          <p>
+            <% if (order.status === 'DISPUTED') { %>
+              <%= order.disputed_at ? new Date(order.disputed_at).toLocaleString() : 'Pending' %>
+            <% } else { %>
+              <%= order.confirmed_at ? new Date(order.confirmed_at).toLocaleString() : 'Pending' %>
+            <% } %>
+          </p>
+        </div>
       </div>
+
       <div class="info-box">
-        <h4>Participants</h4>
-        <p>Buyer: <%= order.buyer_name %></p>
-        <p>Seller: <%= order.seller_name %></p>
-        <p>Shipping: <%= order.shipping_details %></p>
+        <h4>Shipping details</h4>
+        <p><%= order.shipping_details %></p>
         <% if (order.tracking_code) { %>
           <p>Tracking: <%= order.tracking_code %></p>
         <% } %>
       </div>
+
       <% if (currentUser.id === order.seller_id) { %>
         <div class="action-column">
           <form method="POST" action="/orders/<%= order.id %>/ship" class="form-card">
             <label>
-              Tracking number (or write No tracking)
+              Tracking number (or leave blank)
               <input type="text" name="trackingCode" placeholder="Tracking number" />
             </label>
             <button class="button primary" type="submit">Mark as shipped</button>
@@ -43,6 +62,7 @@
       <% } %>
       <% if (currentUser.id === order.buyer_id) { %>
         <div class="action-column">
+          <div class="notice">Confirm within 24 hours after delivery to release funds.</div>
           <form method="POST" action="/orders/<%= order.id %>/confirm">
             <button class="button primary" type="submit" <%= order.status !== 'DELIVERED' ? 'disabled' : '' %>>Confirm received</button>
           </form>
@@ -50,12 +70,27 @@
             <button class="button ghost" type="submit" <%= order.status !== 'DELIVERED' ? 'disabled' : '' %>>Report issue</button>
           </form>
           <% if (remainingMs !== null) { %>
-            <p class="muted">Time left to confirm: <%= Math.ceil(remainingMs / 3600000) %> hours.</p>
+            <p class="muted" data-countdown="<%= remainingMs %>">Time left to confirm: calculating…</p>
           <% } %>
         </div>
       <% } %>
-      <a class="link" href="/messages">View messages</a>
+      <a class="link" href="/messages">Go to messages</a>
     </div>
   </div>
 </section>
+
+<script>
+  const countdownEl = document.querySelector('[data-countdown]');
+  if (countdownEl) {
+    const totalMs = Number(countdownEl.dataset.countdown);
+    const start = Date.now();
+    const updateCountdown = () => {
+      const remaining = Math.max(0, totalMs - (Date.now() - start));
+      const hours = Math.ceil(remaining / 3600000);
+      countdownEl.textContent = `Time left to confirm: ${hours} hour${hours === 1 ? '' : 's'}.`;
+    };
+    updateCountdown();
+    setInterval(updateCountdown, 60000);
+  }
+</script>
 <%- include('../partials/footer') %>

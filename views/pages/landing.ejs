@@ -1,35 +1,111 @@
 <%- include('../partials/header') %>
 <section class="hero">
   <div class="container hero-content">
-    <div>
-      <p class="badge">Escrow-style protection</p>
-      <h1>Buy and sell safely with a 24-hour confirmation window.</h1>
+    <div class="hero-copy">
+      <p class="badge">Verified gamer marketplace</p>
+      <h1>Trade games, consoles, and gear in a neon-lit marketplace.</h1>
       <p class="subtitle">
-        SafeSwap is a buyer-to-buyer marketplace inspired by Eneba + Vinted, built for trust.
-        Pay through the platform, sellers ship fast, and buyers have 24 hours after delivery to confirm or dispute.
+        NeonSwap keeps every deal protected with escrow payments, delivery tracking, and a 24-hour confirmation
+        window. Buy with confidence and sell fast with built-in messaging.
       </p>
-      <a class="button primary" href="/marketplace">Marketplace</a>
+      <div class="hero-actions">
+        <a class="button primary" href="/marketplace">Browse Marketplace</a>
+        <% if (locals.currentUser) { %>
+          <a class="button ghost" href="/listings/new">Create Listing</a>
+        <% } else { %>
+          <a class="button ghost" href="/auth/register">Join the arena</a>
+        <% } %>
+      </div>
+      <div class="hero-stats">
+        <div>
+          <h3><%= stats?.users_count || 0 %>+</h3>
+          <p>Active traders</p>
+        </div>
+        <div>
+          <h3><%= stats?.listings_count || 0 %>+</h3>
+          <p>Listings live</p>
+        </div>
+        <div>
+          <h3><%= stats?.orders_count || 0 %>+</h3>
+          <p>Trades protected</p>
+        </div>
+      </div>
     </div>
     <div class="hero-card">
       <h3>How it works</h3>
       <ol>
-        <li>Buyer pays through SafeSwap escrow.</li>
-        <li>Seller ships with tracking or a note.</li>
-        <li>Buyer confirms within 24 hours or opens a dispute.</li>
-        <li>Funds release automatically after confirmation window.</li>
+        <li>Buyers pay through NeonSwap escrow.</li>
+        <li>Sellers ship with tracking or local pickup.</li>
+        <li>Buyers confirm within 24 hours or open a dispute.</li>
+        <li>Funds release instantly after confirmation.</li>
       </ol>
+      <div class="hero-highlight">
+        <p>🚀 Same-day payouts for top-rated sellers.</p>
+      </div>
     </div>
   </div>
 </section>
 
 <section class="container section">
-  <h2>New Listings</h2>
+  <div class="section-header">
+    <div>
+      <h2>Featured categories</h2>
+      <p class="muted">Everything a gamer needs, curated by category.</p>
+    </div>
+  </div>
+  <div class="category-grid">
+    <% categories.forEach(category => { %>
+      <a class="category-card" href="/marketplace?category=<%= encodeURIComponent(category) %>">
+        <h3><%= category %></h3>
+        <p>Shop the hottest <%= category.toLowerCase() %> drops.</p>
+      </a>
+    <% }) %>
+  </div>
+</section>
+
+<section class="section alt">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h2>Latest listings</h2>
+        <p class="muted">Fresh finds from trusted sellers.</p>
+      </div>
+      <a class="link" href="/marketplace">See all</a>
+    </div>
+    <div class="card-grid">
+      <% latestListings.forEach(listing => { %>
+        <a class="card" href="/listings/<%= listing.id %>">
+          <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+          <div class="card-body">
+            <div class="card-title">
+              <h3><%= listing.title %></h3>
+              <span class="badge ghost"><%= listing.condition %></span>
+            </div>
+            <p class="price"><%= formatPrice(listing.price_cents) %></p>
+            <p class="meta">Seller: <%= listing.seller_name %></p>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>Trending now</h2>
+      <p class="muted">Listings with the most activity this week.</p>
+    </div>
+  </div>
   <div class="card-grid">
-    <% listings.forEach(listing => { %>
+    <% trendingListings.forEach(listing => { %>
       <a class="card" href="/listings/<%= listing.id %>">
         <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
         <div class="card-body">
-          <h3><%= listing.title %></h3>
+          <div class="card-title">
+            <h3><%= listing.title %></h3>
+            <span class="badge accent">Trending</span>
+          </div>
           <p class="price"><%= formatPrice(listing.price_cents) %></p>
           <p class="meta">Seller: <%= listing.seller_name %></p>
         </div>
@@ -38,18 +114,109 @@
   </div>
 </section>
 
-<section class="container section trust">
-  <div>
-    <h2>Trust & Safety</h2>
-    <p>Identity-backed profiles, escrow protection, and real-time messaging keep every trade transparent.</p>
+<section class="section alt">
+  <div class="container trust-grid">
+    <div>
+      <h2>Trust & safety controls</h2>
+      <p>
+        Every trade is backed by escrow protection, dispute resolution, and verified communication tools.
+        NeonSwap keeps seller ratings and shipping history in view so you always know who you are dealing with.
+      </p>
+      <ul class="list">
+        <li>Secure escrow that auto-releases after confirmation.</li>
+        <li>Auto-confirm 24 hours after delivery if no dispute.</li>
+        <li>Dedicated safety team for escalations.</li>
+      </ul>
+    </div>
+    <div class="trust-cards">
+      <div class="trust-card">
+        <h3>Level-up support</h3>
+        <p>Priority chat, live status updates, and dispute mediation.</p>
+      </div>
+      <div class="trust-card">
+        <h3>Seller scoreboard</h3>
+        <p>Top sellers get instant payouts and highlight badges.</p>
+      </div>
+    </div>
   </div>
-  <div>
-    <h2>Featured Categories</h2>
-    <ul>
-      <li>Collectibles & gaming</li>
-      <li>Streetwear & fashion</li>
-      <li>Tech & accessories</li>
-    </ul>
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>How NeonSwap works</h2>
+      <p class="muted">From listing to delivery in four steps.</p>
+    </div>
+  </div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <span>1</span>
+      <h3>List your gear</h3>
+      <p>Add photos, condition, and shipping details in minutes.</p>
+    </div>
+    <div class="step-card">
+      <span>2</span>
+      <h3>Chat instantly</h3>
+      <p>Message buyers and negotiate while keeping everything on-platform.</p>
+    </div>
+    <div class="step-card">
+      <span>3</span>
+      <h3>Ship with tracking</h3>
+      <p>Mark items shipped and keep buyers updated.</p>
+    </div>
+    <div class="step-card">
+      <span>4</span>
+      <h3>Get paid</h3>
+      <p>Funds release after confirmation or auto-release after 24 hours.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section alt">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h2>Players love NeonSwap</h2>
+        <p class="muted">Real stories from the marketplace.</p>
+      </div>
+    </div>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <p>“Sold my Switch in 2 hours. The escrow made the buyer super confident.”</p>
+        <span>— Lani, console seller</span>
+      </div>
+      <div class="testimonial-card">
+        <p>“The chat and tracking updates kept everything smooth. Loved the neon vibe!”</p>
+        <span>— Marco, PC builder</span>
+      </div>
+      <div class="testimonial-card">
+        <p>“Finally a marketplace built for gamers. The categories make it easy to browse.”</p>
+        <span>— Ade, collector</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>FAQ</h2>
+      <p class="muted">Got questions? We have answers.</p>
+    </div>
+  </div>
+  <div class="faq-grid">
+    <div class="faq-card">
+      <h3>How long do payouts take?</h3>
+      <p>After the buyer confirms delivery (or 24 hours after delivery), funds release instantly.</p>
+    </div>
+    <div class="faq-card">
+      <h3>What if something goes wrong?</h3>
+      <p>Open a dispute within 24 hours of delivery. Our safety team reviews every claim.</p>
+    </div>
+    <div class="faq-card">
+      <h3>Is shipping required?</h3>
+      <p>You can offer local pickup too. Add the details in your listing so buyers know the options.</p>
+    </div>
   </div>
 </section>
 <%- include('../partials/footer') %>

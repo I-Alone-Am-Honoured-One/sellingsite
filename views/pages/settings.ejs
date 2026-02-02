@@ -1,0 +1,69 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Settings</h1>
+      <p class="muted">Update your login, email, and notification preferences.</p>
+    </div>
+  </div>
+
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+  <% if (success) { %>
+    <div class="success"><%= success %></div>
+  <% } %>
+
+  <div class="settings-grid">
+    <form class="form-card" method="POST" action="/settings">
+      <input type="hidden" name="action" value="password" />
+      <h3>Change password</h3>
+      <label>
+        Current password
+        <input type="password" name="currentPassword" required />
+      </label>
+      <label>
+        New password
+        <input type="password" name="newPassword" required />
+      </label>
+      <label>
+        Confirm new password
+        <input type="password" name="confirmPassword" required />
+      </label>
+      <button class="button primary" type="submit">Update password</button>
+    </form>
+
+    <form class="form-card" method="POST" action="/settings">
+      <input type="hidden" name="action" value="email" />
+      <h3>Update email</h3>
+      <label>
+        Email address
+        <input type="email" name="email" value="<%= user.email %>" required />
+      </label>
+      <button class="button ghost" type="submit">Save email</button>
+    </form>
+
+    <form class="form-card" method="POST" action="/settings">
+      <input type="hidden" name="action" value="notifications" />
+      <h3>Notifications</h3>
+      <label class="checkbox">
+        <input type="checkbox" name="notification_enabled" <%= user.notification_enabled ? 'checked' : '' %> />
+        Notify me about order updates and messages.
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" name="marketing_enabled" <%= user.marketing_enabled ? 'checked' : '' %> />
+        Send me marketplace news and promos.
+      </label>
+      <button class="button ghost" type="submit">Save preferences</button>
+    </form>
+
+    <div class="form-card">
+      <h3>Session management</h3>
+      <p class="muted">Log out to end this session. More device controls coming soon.</p>
+      <form method="POST" action="/auth/logout">
+        <button class="button primary" type="submit">Log out</button>
+      </form>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

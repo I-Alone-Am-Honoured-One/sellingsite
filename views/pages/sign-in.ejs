@@ -1,7 +1,11 @@
 <%- include('../partials/header') %>
 <section class="container section narrow">
-  <h1>Sign in</h1>
-  <p>Access your orders, listings, and inbox.</p>
+  <div class="section-header">
+    <div>
+      <h1>Welcome back</h1>
+      <p class="muted">Sign in to manage your listings and orders.</p>
+    </div>
+  </div>
   <% if (error) { %>
     <div class="error"><%= error %></div>
   <% } %>

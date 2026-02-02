@@ -3,32 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SafeSwap Marketplace</title>
+  <title>NeonSwap Marketplace</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <header class="site-header">
     <div class="container header-content">
-      <a class="logo" href="/">SafeSwap</a>
+      <a class="logo" href="/">NeonSwap</a>
       <nav class="nav-links">
+        <a href="/">Home</a>
         <a href="/marketplace">Marketplace</a>
         <% if (locals.currentUser) { %>
           <a href="/listings/new">Create Listing</a>
-          <a href="/orders">Orders</a>
-          <a href="/messages">Inbox</a>
+          <a href="/messages">Messages</a>
         <% } %>
       </nav>
-      <div class="auth-links">
+      <div class="header-actions">
         <% if (locals.currentUser) { %>
-          <span class="user-tag">Hi, <%= currentUser.username %></span>
-          <form method="POST" action="/auth/logout">
-            <button class="link-button" type="submit">Log out</button>
-          </form>
+          <div class="profile-menu">
+            <button class="profile-trigger" type="button">
+              <span class="avatar">
+                <% if (currentUser.avatar_url) { %>
+                  <img src="<%= currentUser.avatar_url %>" alt="<%= currentUser.username %> avatar" />
+                <% } else { %>
+                  <span><%= currentUser.username.slice(0, 1).toUpperCase() %></span>
+                <% } %>
+              </span>
+              <span class="username"><%= currentUser.username %></span>
+              <span class="caret">▾</span>
+            </button>
+            <div class="profile-dropdown">
+              <a href="/profile">Profile</a>
+              <a href="/orders">Orders</a>
+              <a href="/messages">Messages</a>
+              <a href="/settings">Settings</a>
+              <form method="POST" action="/auth/logout">
+                <button class="link-button" type="submit">Log out</button>
+              </form>
+            </div>
+          </div>
         <% } else { %>
           <a href="/auth/sign-in">Sign in</a>
-          <a class="button ghost" href="/auth/register">Register</a>
+          <a class="button primary" href="/auth/register">Register</a>
         <% } %>
       </div>
     </div>
   </header>
-  <main>
+  <main class="main-content">

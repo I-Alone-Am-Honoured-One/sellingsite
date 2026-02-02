@@ -1,20 +1,34 @@
 <%- include('../partials/header') %>
 <section class="container section">
-  <h1>Inbox</h1>
+  <div class="section-header">
+    <div>
+      <h1>Messages</h1>
+      <p class="muted">Your latest conversations are sorted by activity.</p>
+    </div>
+  </div>
   <div class="messages-layout">
     <div class="thread-list">
       <% if (threads.length === 0) { %>
-        <p class="muted">No conversations yet.</p>
+        <div class="empty-state">
+          <h3>No conversations yet</h3>
+          <p>Start a chat from any listing to connect with sellers.</p>
+        </div>
       <% } %>
       <% threads.forEach(thread => { %>
         <a class="thread-item" href="/messages/<%= thread.id %>">
           <div>
-            <h3><%= thread.listing_title || 'General inquiry' %></h3>
+            <div class="thread-title">
+              <h3><%= thread.listing_title || 'General inquiry' %></h3>
+              <% if (Number(thread.unread_count) > 0) { %>
+                <span class="badge accent"><%= thread.unread_count %> unread</span>
+              <% } %>
+            </div>
             <p class="meta"><%= thread.latest_message || 'Start the conversation.' %></p>
+            <% if (thread.latest_at) { %>
+              <span class="timestamp"><%= new Date(thread.latest_at).toLocaleString() %></span>
+            <% } %>
           </div>
-          <% if (Number(thread.unread_count) > 0) { %>
-            <span class="badge"><%= thread.unread_count %> new</span>
-          <% } %>
+          <span class="link">Open</span>
         </a>
       <% }) %>
     </div>
