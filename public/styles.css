@@ -1012,6 +1012,68 @@ img {
   color: var(--muted);
 }
 
+body.is-mobile .container {
+  width: min(100%, 92%);
+}
+
+body.is-mobile .header-content {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.is-mobile .nav-links {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+body.is-mobile .header-actions {
+  width: 100%;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+body.is-mobile .profile-trigger {
+  width: 100%;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+}
+
+body.is-mobile .hero-actions,
+body.is-mobile .action-row,
+body.is-mobile .search-bar,
+body.is-mobile .message-input,
+body.is-mobile .thread-header,
+body.is-mobile .status-row,
+body.is-mobile .stats-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+body.is-mobile .button,
+body.is-mobile .tab,
+body.is-mobile .link-button {
+  width: 100%;
+  text-align: center;
+}
+
+body.is-mobile .button,
+body.is-mobile .tab {
+  padding: 0.9rem 1.2rem;
+  font-size: 1rem;
+}
+
+body.is-mobile .message {
+  max-width: 100%;
+}
+
+body.is-mobile .order-card {
+  align-items: stretch;
+}
+
+body.is-mobile .order-meta {
+  text-align: left;
+}
+
 @media (max-width: 900px) {
   .messages-layout {
     grid-template-columns: 1fr;
