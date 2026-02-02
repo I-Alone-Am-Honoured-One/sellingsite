@@ -16,7 +16,6 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/healthz', (req, res) => res.status(200).send('ok'));
 
 
 function formatPrice(cents) {
