@@ -1,0 +1,41 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <h1>Your Orders</h1>
+  <div class="two-column">
+    <div>
+      <h2>Purchases</h2>
+      <% if (buyerOrders.length === 0) { %>
+        <p class="muted">No purchases yet.</p>
+      <% } %>
+      <% buyerOrders.forEach(order => { %>
+        <a class="order-card" href="/orders/<%= order.id %>">
+          <img src="<%= order.image_url %>" alt="<%= order.title %>" />
+          <div>
+            <h3><%= order.title %></h3>
+            <p class="meta">Seller: <%= order.seller_name %></p>
+            <p class="meta">Status: <span class="status"><%= order.status %></span></p>
+          </div>
+          <div class="price"><%= formatPrice(order.price_cents) %></div>
+        </a>
+      <% }) %>
+    </div>
+    <div>
+      <h2>Sales</h2>
+      <% if (sellerOrders.length === 0) { %>
+        <p class="muted">No sales yet.</p>
+      <% } %>
+      <% sellerOrders.forEach(order => { %>
+        <a class="order-card" href="/orders/<%= order.id %>">
+          <img src="<%= order.image_url %>" alt="<%= order.title %>" />
+          <div>
+            <h3><%= order.title %></h3>
+            <p class="meta">Buyer: <%= order.buyer_name %></p>
+            <p class="meta">Status: <span class="status"><%= order.status %></span></p>
+          </div>
+          <div class="price"><%= formatPrice(order.price_cents) %></div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <h1>Create a listing</h1>
+  <p>Share your item with the marketplace. Listings appear instantly.</p>
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+  <form class="form-card" method="POST" action="/listings">
+    <label>
+      Title
+      <input type="text" name="title" required />
+    </label>
+    <label>
+      Description
+      <textarea name="description" rows="4" required></textarea>
+    </label>
+    <div class="form-row">
+      <label>
+        Price (USD)
+        <input type="number" name="price" step="0.01" required />
+      </label>
+      <label>
+        Category
+        <input type="text" name="category" required />
+      </label>
+    </div>
+    <div class="form-row">
+      <label>
+        Condition
+        <input type="text" name="condition" required />
+      </label>
+      <label>
+        Image URL
+        <input type="url" name="imageUrl" required />
+      </label>
+    </div>
+    <label>
+      Shipping Details
+      <textarea name="shippingDetails" rows="3" required></textarea>
+    </label>
+    <button class="button primary" type="submit">Publish Listing</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>

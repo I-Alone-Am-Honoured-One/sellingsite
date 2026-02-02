@@ -1,0 +1,26 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <h1>Inbox</h1>
+  <div class="messages-layout">
+    <div class="thread-list">
+      <% if (threads.length === 0) { %>
+        <p class="muted">No conversations yet.</p>
+      <% } %>
+      <% threads.forEach(thread => { %>
+        <a class="thread-item" href="/messages/<%= thread.id %>">
+          <div>
+            <h3><%= thread.listing_title || 'General inquiry' %></h3>
+            <p class="meta"><%= thread.latest_message || 'Start the conversation.' %></p>
+          </div>
+          <% if (Number(thread.unread_count) > 0) { %>
+            <span class="badge"><%= thread.unread_count %> new</span>
+          <% } %>
+        </a>
+      <% }) %>
+    </div>
+    <div class="messages-empty">
+      <p>Select a thread to view messages.</p>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>

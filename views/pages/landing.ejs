@@ -1,0 +1,55 @@
+<%- include('../partials/header') %>
+<section class="hero">
+  <div class="container hero-content">
+    <div>
+      <p class="badge">Escrow-style protection</p>
+      <h1>Buy and sell safely with a 24-hour confirmation window.</h1>
+      <p class="subtitle">
+        SafeSwap is a buyer-to-buyer marketplace inspired by Eneba + Vinted, built for trust.
+        Pay through the platform, sellers ship fast, and buyers have 24 hours after delivery to confirm or dispute.
+      </p>
+      <a class="button primary" href="/marketplace">Marketplace</a>
+    </div>
+    <div class="hero-card">
+      <h3>How it works</h3>
+      <ol>
+        <li>Buyer pays through SafeSwap escrow.</li>
+        <li>Seller ships with tracking or a note.</li>
+        <li>Buyer confirms within 24 hours or opens a dispute.</li>
+        <li>Funds release automatically after confirmation window.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  <h2>New Listings</h2>
+  <div class="card-grid">
+    <% listings.forEach(listing => { %>
+      <a class="card" href="/listings/<%= listing.id %>">
+        <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+        <div class="card-body">
+          <h3><%= listing.title %></h3>
+          <p class="price"><%= formatPrice(listing.price_cents) %></p>
+          <p class="meta">Seller: <%= listing.seller_name %></p>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+</section>
+
+<section class="container section trust">
+  <div>
+    <h2>Trust & Safety</h2>
+    <p>Identity-backed profiles, escrow protection, and real-time messaging keep every trade transparent.</p>
+  </div>
+  <div>
+    <h2>Featured Categories</h2>
+    <ul>
+      <li>Collectibles & gaming</li>
+      <li>Streetwear & fashion</li>
+      <li>Tech & accessories</li>
+    </ul>
+  </div>
+</section>
+<%- include('../partials/footer') %>
