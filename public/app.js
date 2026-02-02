@@ -1,4 +1,14 @@
 const profileMenu = document.querySelector('.profile-menu');
+const mobileQuery = window.matchMedia('(max-width: 768px)');
+
+const syncDeviceClass = (event) => {
+  const isMobile = event.matches;
+  document.body.classList.toggle('is-mobile', isMobile);
+  document.body.dataset.device = isMobile ? 'mobile' : 'desktop';
+};
+
+syncDeviceClass(mobileQuery);
+mobileQuery.addEventListener('change', syncDeviceClass);
 
 if (profileMenu) {
   const trigger = profileMenu.querySelector('.profile-trigger');
