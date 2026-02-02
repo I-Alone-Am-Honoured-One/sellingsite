@@ -1049,6 +1049,38 @@ body.is-mobile .stats-row {
   align-items: stretch;
 }
 
+body.is-mobile .hero {
+  padding: 3rem 0 2.5rem;
+}
+
+body.is-mobile .hero-card {
+  padding: 1.5rem;
+}
+
+body.is-mobile .section-header {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+body.is-mobile .card-grid,
+body.is-mobile .category-grid,
+body.is-mobile .detail-grid,
+body.is-mobile .settings-grid {
+  grid-template-columns: 1fr;
+}
+
+body.is-mobile .card img {
+  height: 160px;
+}
+
+body.is-mobile .form-card {
+  padding: 1.5rem;
+}
+
+body.is-mobile .form-row {
+  grid-template-columns: 1fr;
+}
+
 body.is-mobile .button,
 body.is-mobile .tab,
 body.is-mobile .link-button {
@@ -1071,6 +1103,11 @@ body.is-mobile .order-card {
 }
 
 body.is-mobile .order-meta {
+  text-align: left;
+}
+
+body.is-mobile .footer-content {
+  grid-template-columns: 1fr;
   text-align: left;
 }
 
