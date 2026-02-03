@@ -483,7 +483,13 @@ app.post(
 );
 
 app.get('/auth/register', (req, res) => {
-  res.render('pages/register', { error: null, form: {} }); // Provide empty form data for initial load
+  res.render('pages/auth', {
+    activePanel: 'register',
+    loginError: null,
+    registerError: null,
+    login: '',
+    form: {}
+  });
 });
 
 app.post(
@@ -492,32 +498,51 @@ app.post(
     const username = (req.body.username || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password;
+
+    const renderRegister = (message) =>
+      res.render('pages/auth', {
+        activePanel: 'register',
+        loginError: null,
+        registerError: message,
+        login: '',
+        form: { username, email }
+      });
+
     if (!username || !email || !password) {
-      return res.render('pages/register', { error: 'All fields are required.', form: { username, email } }); // Preserve input values
+      return renderRegister('All fields are required.');
     }
     if (!isValidEmail(email)) {
-      return res.render('pages/register', { error: 'Please enter a valid email.', form: { username, email } }); // Preserve input values
+      return renderRegister('Please enter a valid email.');
     }
     if (password.length < 8) {
-      return res.render('pages/register', { error: 'Password must be at least 8 characters.', form: { username, email } }); // Preserve input values
+      return renderRegister('Password must be at least 8 characters.');
     }
+
     const passwordHash = await bcrypt.hash(password, 10);
+
     try {
       const { rows } = await query(
         'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
         [username, email, passwordHash]
       );
+
       const token = await createSession(rows[0].id);
       setSessionCookie(res, token);
       return res.redirect('/settings');
     } catch (error) {
-      return res.render('pages/register', { error: 'Username or email already in use.', form: { username, email } }); // Preserve input values
+      return renderRegister('Username or email already in use.');
     }
   })
 );
 
 app.get('/auth/sign-in', (req, res) => {
-  res.render('pages/sign-in', { error: null, login: '' });
+  res.render('pages/auth', {
+    activePanel: 'login',
+    loginError: null,
+    registerError: null,
+    login: '',
+    form: {}
+  });
 });
 
 app.post(
@@ -525,21 +550,36 @@ app.post(
   asyncHandler(async (req, res) => {
     const login = (req.body.login || '').trim();
     const password = req.body.password;
+
+    const renderLogin = (message) =>
+      res.render('pages/auth', {
+        activePanel: 'login',
+        loginError: message,
+        registerError: null,
+        login,
+        form: {}
+      });
+
     if (!login || !password) {
-      return res.render('pages/sign-in', { error: 'Email/username and password required.', login });
+      return renderLogin('Email/username and password required.');
     }
+
     const loginLower = login.toLowerCase();
-    const { rows } = await query('SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1', [
-      loginLower
-    ]);
+    const { rows } = await query(
+      'SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1',
+      [loginLower]
+    );
+
     const user = rows[0];
     if (!user) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.', login });
+      return renderLogin('Invalid credentials.');
     }
+
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.', login });
+      return renderLogin('Invalid credentials.');
     }
+
     const token = await createSession(user.id);
     setSessionCookie(res, token);
     return res.redirect('/');
