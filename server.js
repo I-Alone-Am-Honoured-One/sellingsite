@@ -184,9 +184,9 @@ async function sendResetEmail({ email, code }) {
   await transporter.sendMail({
     from: EMAIL_FROM,
     to: email,
-    subject: 'NeonSwap password reset code',
-    text: `Your NeonSwap reset code is ${code}. It expires in ${RESET_CODE_TTL_MINUTES} minutes.`,
-    html: `<p>Your NeonSwap reset code is <strong>${code}</strong>. It expires in ${RESET_CODE_TTL_MINUTES} minutes.</p>`
+    subject: 'Sellar password reset code',
+    text: `Your Sellar reset code is ${code}. It expires in ${RESET_CODE_TTL_MINUTES} minutes.`,
+    html: `<p>Your Sellar reset code is <strong>${code}</strong>. It expires in ${RESET_CODE_TTL_MINUTES} minutes.</p>`
   });
 }
 
@@ -753,6 +753,10 @@ app.get('/auth/register', (req, res) => {
   });
 });
 
+app.get('/terms', (req, res) => {
+  res.render('pages/terms');
+});
+
 app.post(
   '/auth/register',
   asyncHandler(async (req, res) => {
@@ -767,7 +771,7 @@ app.post(
         loginError: null,
         registerError: message,
         login: '',
-        form: { username, email }
+        form: { username, email, termsAccepted }
       });
 
     if (!username || !email || !password || !passwordConfirm) {
@@ -781,6 +785,9 @@ app.post(
     }
     if (password.length < 8) {
       return renderRegister('Password must be at least 8 characters.');
+    }
+    if (!termsAccepted) {
+      return renderRegister('You must agree to the Terms of Service to create an account.');
     }
 
     const { rows: loginConflicts } = await query(
