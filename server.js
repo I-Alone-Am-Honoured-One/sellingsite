@@ -1148,20 +1148,13 @@ app.get(
   '/profile',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const userId = res.locals.currentUser.id;
-    const { rows: users } = await query(
-      'SELECT id, username, email, avatar_url FROM users WHERE id = $1',
-      [userId]
-    );
-    const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-    const { rows: orderStats } = await query(
-      'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-      [userId]
-    );
+    const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
     res.render('pages/profile', {
-      user: users[0],
-      listingCount: Number(listingStats[0]?.count || 0),
-      orderCount: Number(orderStats[0]?.count || 0),
+      user,
+      listingCount,
+      orderCount,
+      listings,
+      formatPrice,
       error: null,
       success: null
     });
@@ -1178,19 +1171,13 @@ app.post(
       }
       const message =
         error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
-      const userId = res.locals.currentUser.id;
-      const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [
-        userId
-      ]);
-      const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-      const { rows: orderStats } = await query(
-        'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-        [userId]
-      );
+      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
       return res.render('pages/profile', {
-        user: users[0],
-        listingCount: Number(listingStats[0]?.count || 0),
-        orderCount: Number(orderStats[0]?.count || 0),
+        user,
+        listingCount,
+        orderCount,
+        listings,
+        formatPrice,
         error: message,
         success: null
       });
@@ -1198,19 +1185,13 @@ app.post(
   },
   asyncHandler(async (req, res) => {
     if (!req.file) {
-      const userId = res.locals.currentUser.id;
-      const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [
-        userId
-      ]);
-      const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-      const { rows: orderStats } = await query(
-        'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-        [userId]
-      );
+      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
       return res.render('pages/profile', {
-        user: users[0],
-        listingCount: Number(listingStats[0]?.count || 0),
-        orderCount: Number(orderStats[0]?.count || 0),
+        user,
+        listingCount,
+        orderCount,
+        listings,
+        formatPrice,
         error: 'Please upload an avatar image.',
         success: null
       });
@@ -1219,19 +1200,13 @@ app.post(
     try {
       avatarUrl = await uploadImage(req.file);
     } catch (error) {
-      const userId = res.locals.currentUser.id;
-      const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [
-        userId
-      ]);
-      const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-      const { rows: orderStats } = await query(
-        'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-        [userId]
-      );
+      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
       return res.render('pages/profile', {
-        user: users[0],
-        listingCount: Number(listingStats[0]?.count || 0),
-        orderCount: Number(orderStats[0]?.count || 0),
+        user,
+        listingCount,
+        orderCount,
+        listings,
+        formatPrice,
         error: 'Avatar upload failed. Please try again.',
         success: null
       });

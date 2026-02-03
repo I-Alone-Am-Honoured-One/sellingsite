@@ -830,6 +830,27 @@ img {
   font-family: inherit;
 }
 
+.file-input {
+  border: 1px dashed var(--border);
+  background: rgba(15, 23, 42, 0.7);
+  padding: 0.5rem;
+}
+
+.file-input::file-selector-button {
+  margin-right: 1rem;
+  border: none;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.file-input::file-selector-button:hover {
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
 .form-card input:focus,
 .form-card textarea:focus,
 .form-card select:focus {
@@ -1230,7 +1251,8 @@ img {
 }
 
 .thread-body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   background: var(--card);
   border-radius: 1.5rem;
@@ -1256,17 +1278,20 @@ img {
 }
 
 .message {
-  max-width: 75%;
+  max-width: 85%;
   background: var(--card-alt);
   padding: 1rem 1.25rem;
   border-radius: 1.25rem;
   border: 1px solid var(--border);
+  align-self: flex-start;
+  width: fit-content;
 }
 
 .message.own {
   margin-left: auto;
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%);
   border-color: rgba(139, 92, 246, 0.4);
+  align-self: flex-end;
 }
 
 .message span {
@@ -1377,6 +1402,23 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.profile-identity {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.profile-bio {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.profile-listings {
+  display: grid;
+  gap: 1rem;
 }
 
 .stats-row {
@@ -1738,6 +1780,11 @@ img {
   .stats-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .profile-identity {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .detail-tags {
