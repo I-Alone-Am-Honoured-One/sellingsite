@@ -79,7 +79,7 @@ app.use(hydrateUser);
 app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 app.get('/', async (req, res) => {
-  const { rows } = await query(`
+  const { rows: latestListings } = await query(`
     SELECT listings.*, users.username AS seller_name
     FROM listings
     JOIN users ON users.id = listings.seller_id
@@ -87,11 +87,20 @@ app.get('/', async (req, res) => {
     LIMIT 6
   `);
 
+  const { rows } = await query(`
+    SELECT
+      (SELECT COUNT(*) FROM users) AS users_count,
+      (SELECT COUNT(*) FROM listings) AS listings_count,
+      (SELECT COUNT(*) FROM orders) AS orders_count
+  `);
+
   res.render('pages/landing', {
-    latestListings: rows,
+    latestListings,
+    stats: rows[0], // ✅ THIS FIXES THE CRASH
     currentUser: res.locals.currentUser
   });
 });
+
 
 /* ================= AUTH ================= */
 
