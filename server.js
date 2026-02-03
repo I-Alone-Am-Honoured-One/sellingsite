@@ -137,34 +137,6 @@ function clearSessionCookie(res, req) {
   res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
 }
 
-function isSecureRequest(req) {
-  return req.secure || req.headers['x-forwarded-proto'] === 'https';
-}
-
-function buildSessionCookieOptions({ sameSite, secure }) {
-  return {
-    httpOnly: true,
-    sameSite,
-    secure,
-    maxAge: SESSION_MAX_AGE_MS,
-    path: '/'
-  };
-}
-
-function setSessionCookie(res, req, token) {
-  res.cookie(SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
-  if (isSecureRequest(req)) {
-    res.cookie(SECURE_SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-  } else {
-    res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-  }
-}
-
-function clearSessionCookie(res, req) {
-  res.clearCookie(SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
-  res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-}
-
 function asyncHandler(handler) {
   return (req, res, next) => {
     Promise.resolve(handler(req, res, next)).catch(next);
@@ -543,7 +515,7 @@ app.post(
         'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
         [username, email, passwordHash]
       );
-      const token = createToken(rows[0]);
+      const token = await createSession(rows[0].id);
       setSessionCookie(res, req, token);
       return res.redirect('/');
     } catch (error) {
@@ -573,16 +545,21 @@ app.post(
     if (!isValid) {
       return res.render('pages/sign-in', { error: 'Invalid credentials.' });
     }
-    const token = createToken(user);
+    const token = await createSession(user.id);
     setSessionCookie(res, req, token);
     return res.redirect('/');
   })
 );
 
-app.post('/auth/logout', (req, res) => {
+app.post('/auth/logout', asyncHandler(async (req, res) => {
+  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
+  if (token) {
+    const tokenHash = hashSessionToken(token);
+    await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
+  }
   clearSessionCookie(res, req);
   res.redirect('/');
-});
+}));
 
 app.get('/auth/forgot-password', (req, res) => {
   res.render('pages/forgot-password', { error: null, success: null });
