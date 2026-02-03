@@ -231,6 +231,20 @@ async function getSettingsPayload(userId) {
   return { user: users[0], listings };
 }
 
+async function getProfilePayload(userId) {
+  const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [userId]);
+  const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
+  const { rows: orderStats } = await query(
+    'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
+    [userId]
+  );
+  return {
+    user: users[0],
+    listingCount: Number(listingStats[0]?.count || 0),
+    orderCount: Number(orderStats[0]?.count || 0)
+  };
+}
+
 async function hydrateUser(req, res, next) {
   const token = req.cookies[SESSION_COOKIE];
   if (!token) {
@@ -554,6 +568,22 @@ app.post(
       [title, description, priceCents, category, condition, imageUrl, shippingDetails, listingId, userId]
     );
     return res.redirect(`/listings/${listingId}`);
+  })
+);
+
+app.post(
+  '/listings/:id/delete',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const listingId = req.params.id;
+    const userId = res.locals.currentUser.id;
+    const { rows } = await query('SELECT id FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+    const listing = rows[0];
+    if (!listing) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    await query('DELETE FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+    return res.redirect('/settings');
   })
 );
 
