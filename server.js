@@ -509,7 +509,7 @@ app.post(
       );
       const token = await createSession(rows[0].id);
       setSessionCookie(res, token);
-      return res.redirect('/');
+      return res.redirect('/settings');
     } catch (error) {
       return res.render('pages/register', { error: 'Username or email already in use.', form: { username, email } }); // Preserve input values
     }
@@ -1009,10 +1009,80 @@ app.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await query(
-      'SELECT email, notification_enabled, marketing_enabled FROM users WHERE id = $1',
+      'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
       [res.locals.currentUser.id]
     );
     res.render('pages/settings', { user: rows[0], error: null, success: null });
+  })
+);
+
+app.post(
+  '/settings/profile',
+  requireAuth,
+  (req, res, next) => {
+    uploadAvatarImage(req, res, async (error) => {
+      if (!error) {
+        return next();
+      }
+      const message =
+        error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
+      const { rows } = await query(
+        'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
+        [res.locals.currentUser.id]
+      );
+      return res.render('pages/settings', { user: rows[0], error: message, success: null });
+    });
+  },
+  asyncHandler(async (req, res) => {
+    const username = (req.body.username || '').trim();
+    const bio = (req.body.bio || '').trim();
+    let error = null;
+    let success = null;
+
+    if (!username) {
+      error = 'Username is required.';
+    } else {
+      const { rows: existingUsers } = await query(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2 LIMIT 1',
+        [username, res.locals.currentUser.id]
+      );
+      if (existingUsers.length) {
+        error = 'That username is already in use.';
+      }
+    }
+
+    let avatarUrl = null;
+    if (!error && req.file) {
+      try {
+        avatarUrl = await uploadImage(req.file);
+      } catch (uploadError) {
+        error = 'Avatar upload failed. Please try again.';
+      }
+    }
+
+    if (!error) {
+      if (avatarUrl) {
+        await query('UPDATE users SET username = $1, bio = $2, avatar_url = $3 WHERE id = $4', [
+          username,
+          bio,
+          avatarUrl,
+          res.locals.currentUser.id
+        ]);
+      } else {
+        await query('UPDATE users SET username = $1, bio = $2 WHERE id = $3', [
+          username,
+          bio,
+          res.locals.currentUser.id
+        ]);
+      }
+      success = 'Profile updated successfully.';
+    }
+
+    const { rows } = await query(
+      'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
+      [res.locals.currentUser.id]
+    );
+    res.render('pages/settings', { user: rows[0], error, success });
   })
 );
 
@@ -1073,7 +1143,7 @@ app.post(
     }
 
     const { rows } = await query(
-      'SELECT email, notification_enabled, marketing_enabled FROM users WHERE id = $1',
+      'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
       [res.locals.currentUser.id]
     );
     res.render('pages/settings', { user: rows[0], error, success });
