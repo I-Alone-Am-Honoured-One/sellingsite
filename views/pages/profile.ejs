@@ -1,12 +1,5 @@
 <%- include('../partials/header') %>
 <section class="container section">
-  <div class="section-header">
-    <div>
-      <h1>Your profile</h1>
-      <p class="muted">Manage your account, avatar, and marketplace stats.</p>
-    </div>
-  </div>
-
   <% if (error) { %>
     <div class="error"><%= error %></div>
   <% } %>
@@ -14,75 +7,127 @@
     <div class="success"><%= success %></div>
   <% } %>
 
-  <div class="profile-grid">
-    <div class="profile-card">
-      <% const joinedDate = user.created_at ? new Date(user.created_at) : null; %>
-      <div class="profile-identity">
-        <div class="profile-avatar">
+  <!-- Main Profile Section -->
+  <div class="profile-header-section">
+    <div class="profile-banner"></div>
+    <div class="profile-header-content">
+      <div class="profile-avatar-wrapper">
+        <div class="profile-avatar-large">
           <% if (user.avatar_url) { %>
             <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
           <% } else { %>
             <span><%= user.username.slice(0, 1).toUpperCase() %></span>
           <% } %>
         </div>
-        <div>
-          <h2><%= user.username %></h2>
-          <p class="muted"><%= user.email %></p>
-          <p class="meta">
-            Joined
-            <%= joinedDate && !Number.isNaN(joinedDate.getTime()) ? joinedDate.toLocaleDateString() : '—' %>
-          </p>
-        </div>
       </div>
-      <p class="profile-bio"><%= user.bio || 'Add a short bio to help buyers get to know you.' %></p>
-      <div class="stats-row">
-        <div>
-          <h3><%= listingCount %></h3>
-          <p>Listings</p>
+      
+      <div class="profile-info-section">
+        <div class="profile-name-row">
+          <h1 class="profile-display-name"><%= user.username %></h1>
+          <a class="button primary compact" href="/settings">Edit Profile</a>
         </div>
-        <div>
-          <h3><%= orderCount %></h3>
-          <p>Orders</p>
+        
+        <p class="profile-email"><%= user.email %></p>
+        
+        <% const joinedDate = user.created_at ? new Date(user.created_at) : null; %>
+        <p class="profile-joined-date">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Joined <%= joinedDate && !Number.isNaN(joinedDate.getTime()) ? joinedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—' %>
+        </p>
+        
+        <% if (user.bio && user.bio.trim()) { %>
+          <p class="profile-bio-text"><%= user.bio %></p>
+        <% } else { %>
+          <p class="profile-bio-placeholder">No bio yet. Add one in settings to let buyers know more about you.</p>
+        <% } %>
+        
+        <div class="profile-stats-row">
+          <div class="stat-item">
+            <div class="stat-number"><%= listingCount %></div>
+            <div class="stat-label">Listings</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number"><%= orderCount %></div>
+            <div class="stat-label">Orders</div>
+          </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div class="profile-card">
-      <h3>Profile settings</h3>
-      <p class="muted">Update your avatar, bio, and notification preferences in settings.</p>
-      <div class="profile-actions">
-        <a class="button primary" href="/settings">Go to settings</a>
-      </div>
+  <!-- Listings Section -->
+  <div class="profile-listings-section">
+    <div class="section-title-row">
+      <h2>Your Listings</h2>
+      <a class="button ghost small" href="/listings/new">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Create Listing
+      </a>
     </div>
-
-    <div class="profile-card">
-      <h3>Your listings</h3>
-      <p class="muted">Keep your listings up to date and ready for buyers.</p>
-      <% if (listings.length) { %>
-        <div class="profile-listings">
-          <% listings.forEach(listing => { %>
-            <div class="profile-listing-card">
+    
+    <% if (listings.length) { %>
+      <div class="profile-listings-grid">
+        <% listings.forEach(listing => { %>
+          <div class="listing-card-mini">
+            <div class="listing-image-container">
               <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
-              <div class="profile-listing-details">
-                <h4><%= listing.title %></h4>
-                <p class="muted"><%= formatPrice(listing.price_cents) %></p>
-                <p class="meta">Listed <%= new Date(listing.created_at).toLocaleDateString() %></p>
-              </div>
-              <div class="profile-listing-actions">
-                <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+              <div class="listing-status-badge">Active</div>
+            </div>
+            <div class="listing-details-mini">
+              <h3 class="listing-title-mini"><%= listing.title %></h3>
+              <p class="listing-price-mini"><%= formatPrice(listing.price_cents) %></p>
+              <p class="listing-meta-mini">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Listed <%= new Date(listing.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+              </p>
+              <div class="listing-actions-mini">
+                <a class="button-link" href="/listings/<%= listing.id %>">
+                  View
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+                <a class="button-link" href="/listings/<%= listing.id %>/edit">
+                  Edit
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                </a>
               </div>
             </div>
-          <% }) %>
-        </div>
-      <% } else { %>
-        <div class="empty-state">
-          <p>You do not have any listings yet.</p>
+          </div>
+        <% }) %>
+      </div>
+      
+      <% if (listingCount > 6) { %>
+        <div class="view-all-footer">
+          <a class="button secondary" href="/settings">View All Listings</a>
         </div>
       <% } %>
-      <div class="settings-actions">
-        <a class="button primary" href="/listings/new">Create new listing</a>
+    <% } else { %>
+      <div class="empty-state-box">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+        </svg>
+        <h3>No listings yet</h3>
+        <p>Create your first listing to start selling on Sellar.</p>
+        <a class="button primary" href="/listings/new">Create Your First Listing</a>
       </div>
-    </div>
+    <% } %>
   </div>
 </section>
 <%- include('../partials/footer') %>

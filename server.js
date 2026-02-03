@@ -14,7 +14,7 @@ const { pool, query } = require('./db');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'therealsellar@gmail.com';
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'dev-cookie-secret-change-me';
 const RESET_CODE_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -112,20 +112,6 @@ async function createSession(userId) {
 function resolveCookieSecure(req) {
   if (process.env.COOKIE_SECURE === 'true') return true;
   if (process.env.COOKIE_SECURE === 'false') return false;
-
-  // Default: secure cookies only when in production AND the current request is HTTPS.
-  // With `app.set('trust proxy', 1)`, req.secure should be true behind common proxies when they send X-Forwarded-Proto=https.
-  return process.env.NODE_ENV === 'production' && Boolean(req.secure);
-}
-
-function resolveCookieSecure(req) {
-  // Allow explicit override via environment variable
-  if (process.env.COOKIE_SECURE === 'true') return true;
-  if (process.env.COOKIE_SECURE === 'false') return false;
-
-  // ✓ Default: secure cookies only when in production AND the current request is HTTPS
-  // With `app.set('trust proxy', 1)`, req.secure should be true behind common proxies 
-  // when they send X-Forwarded-Proto=https
   return process.env.NODE_ENV === 'production' && Boolean(req.secure);
 }
 
@@ -134,16 +120,7 @@ function setSessionCookie(req, res, token) {
     httpOnly: true,
     maxAge: SESSION_MAX_AGE_MS,
     sameSite: 'lax',
-    secure: resolveCookieSecure(req),  // ✓ FIXED
-    path: '/'
-  });
-}
-
-function clearSessionCookie(req, res) {
-  res.clearCookie(SESSION_COOKIE, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: resolveCookieSecure(req),  // ✓ FIXED
+    secure: resolveCookieSecure(req),
     path: '/'
   });
 }
@@ -156,6 +133,7 @@ function clearSessionCookie(req, res) {
     path: '/'
   });
 }
+
 function asyncHandler(handler) {
   return (req, res, next) => {
     Promise.resolve(handler(req, res, next)).catch(next);
@@ -182,7 +160,6 @@ function createMailer() {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: Number(process.env.SMTP_PORT || 587) === 465,
-    // ✓ ADDED: Prevent requests from hanging if SMTP is unreachable
     connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
     greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
     socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
@@ -257,180 +234,343 @@ function pickMergedUsername(primaryUsername, secondaryUsername) {
 }
 
 async function mergeUsers(primaryUser, secondaryUser, { passwordHash } = {}) {
-  if (!primaryUser || !secondaryUser || primaryUser.id === secondaryUser.id) return;
-  const mergedUsername = pickMergedUsername(primaryUser.username, secondaryUser.username);
-  const mergedAvatar = primaryUser.avatar_url || secondaryUser.avatar_url;
-  const mergedBio = primaryUser.bio || secondaryUser.bio;
-  const mergedPasswordHash = passwordHash || primaryUser.password_hash;
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    await client.query(
-      `DELETE FROM threads t
-       USING threads existing
-       WHERE t.buyer_id = $2
-         AND existing.buyer_id = $1
-         AND t.seller_id = existing.seller_id
-         AND t.listing_id IS NOT DISTINCT FROM existing.listing_id`,
-      [primaryUser.id, secondaryUser.id]
-    );
-    await client.query(
-      `DELETE FROM threads t
-       USING threads existing
-       WHERE t.seller_id = $2
-         AND existing.seller_id = $1
-         AND t.buyer_id = existing.buyer_id
-         AND t.listing_id IS NOT DISTINCT FROM existing.listing_id`,
-      [primaryUser.id, secondaryUser.id]
-    );
-    await client.query('UPDATE listings SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('UPDATE orders SET buyer_id = $1 WHERE buyer_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('UPDATE orders SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('UPDATE threads SET buyer_id = $1 WHERE buyer_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('UPDATE threads SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('UPDATE messages SET sender_id = $1 WHERE sender_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('UPDATE password_reset_codes SET user_id = $1 WHERE user_id = $2', [
-      primaryUser.id,
-      secondaryUser.id
-    ]);
-    await client.query('UPDATE sessions SET user_id = $1 WHERE user_id = $2', [primaryUser.id, secondaryUser.id]);
-    await client.query('DELETE FROM users WHERE id = $1', [secondaryUser.id]);
-    await client.query(
-      'UPDATE users SET username = $1, avatar_url = $2, bio = $3, password_hash = $4 WHERE id = $5',
-      [mergedUsername, mergedAvatar, mergedBio, mergedPasswordHash, primaryUser.id]
-    );
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+  const finalUsername = pickMergedUsername(primaryUser.username, secondaryUser.username);
+  const finalPasswordHash = passwordHash || primaryUser.password_hash;
+  await query('UPDATE users SET username = $1, password_hash = $2 WHERE id = $3', [
+    finalUsername,
+    finalPasswordHash,
+    primaryUser.id
+  ]);
+  await query('UPDATE listings SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
+  await query('UPDATE orders SET buyer_id = $1 WHERE buyer_id = $2', [primaryUser.id, secondaryUser.id]);
+  await query('UPDATE threads SET buyer_id = $1 WHERE buyer_id = $2', [primaryUser.id, secondaryUser.id]);
+  await query('UPDATE threads SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
+  await query('UPDATE messages SET sender_id = $1 WHERE sender_id = $2', [primaryUser.id, secondaryUser.id]);
+  await query('DELETE FROM users WHERE id = $1', [secondaryUser.id]);
 }
 
-async function getSettingsPayload(userId) {
-  const { rows: users } = await query(
-    'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
-    [userId]
+async function getUserBySession(token) {
+  if (!token) return null;
+  const tokenHash = hashSessionToken(token);
+  const { rows } = await query(
+    `SELECT users.* FROM users
+     JOIN sessions ON users.id = sessions.user_id
+     WHERE sessions.token_hash = $1 AND sessions.expires_at > NOW()
+     LIMIT 1`,
+    [tokenHash]
   );
-  const { rows: listings } = await query(
-    'SELECT id, title, image_url, price_cents FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
-    [userId]
-  );
-  return { user: users[0], listings };
+  return rows[0] || null;
+}
+
+async function refreshUserSession(req, res) {
+  const token = req.cookies[SESSION_COOKIE];
+  if (!token) {
+    return null;
+  }
+  const user = await getUserBySession(token);
+  if (user) {
+    res.locals.currentUser = user;
+  }
+  return user;
+}
+
+async function requireAuth(req, res, next) {
+  const user = await refreshUserSession(req, res);
+  if (!user) {
+    return res.redirect('/auth/sign-in');
+  }
+  next();
 }
 
 async function getProfilePayload(userId) {
-  const { rows: users } = await query(
-    'SELECT id, username, email, avatar_url, bio, created_at FROM users WHERE id = $1',
+  const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
+  const user = userRows[0];
+  const { rows: listingRows } = await query(
+    'SELECT COUNT(*) as count FROM listings WHERE seller_id = $1',
     [userId]
   );
-  const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-  const { rows: orderStats } = await query(
-    'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-    [userId]
-  );
-  // Used by views/pages/profile.ejs to render "Your listings".
-  // Always return an array so the template can safely do `listings.length`.
+  const listingCount = Number(listingRows[0].count);
+  const { rows: orderRows } = await query('SELECT COUNT(*) as count FROM orders WHERE buyer_id = $1', [userId]);
+  const orderCount = Number(orderRows[0].count);
   const { rows: listings } = await query(
-    'SELECT id, title, image_url, price_cents, created_at FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
+    'SELECT * FROM listings WHERE seller_id = $1 ORDER BY created_at DESC LIMIT 6',
     [userId]
   );
-  return {
-    user: users[0],
-    listingCount: Number(listingStats[0]?.count || 0),
-    orderCount: Number(orderStats[0]?.count || 0),
-    listings
-  };
+  return { user, listingCount, orderCount, listings };
 }
 
-async function hydrateUser(req, res, next) {
-  const token = req.cookies[SESSION_COOKIE];
-  if (!token) {
-    res.locals.currentUser = null;
-    return next();
-  }
-  try {
-    const tokenHash = hashSessionToken(token);
-    const { rows } = await query(
-      `SELECT users.id, users.username, users.email, users.avatar_url, sessions.expires_at
-       FROM sessions
-       JOIN users ON sessions.user_id = users.id
-       WHERE sessions.token_hash = $1
-       LIMIT 1`,
-      [tokenHash]
-    );
-    const session = rows[0];
-    if (!session) {
-      clearSessionCookie(req, res);
-      res.locals.currentUser = null;
-      return next();
-    }
-    if (session.expires_at && new Date(session.expires_at).getTime() < Date.now()) {
-      await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
-      clearSessionCookie(req, res);
-      res.locals.currentUser = null;
-      return next();
-    }
-    res.locals.currentUser = {
-      id: session.id,
-      username: session.username,
-      email: session.email,
-      avatar_url: session.avatar_url
-    };
-  } catch (error) {
-    console.error('Session hydration error:', error);
-    res.locals.currentUser = null;
-    clearSessionCookie(req, res);
-  }
-  return next();
+async function getSettingsPayload(userId) {
+  const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
+  const user = userRows[0];
+  const { rows: listings } = await query(
+    'SELECT * FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  return { user, listings };
 }
 
-function requireAuth(req, res, next) {
-  if (!res.locals.currentUser) {
-    return res.redirect('/auth/sign-in');
-  }
-  return next();
-}
+app.use(asyncHandler(async (req, res, next) => {
+  await refreshUserSession(req, res);
+  next();
+}));
 
-app.use(hydrateUser);
-
-app.get('/healthz', (req, res) => {
-  res.json({ status: 'ok' });
+app.get('/', (req, res) => {
+  res.render('pages/landing');
 });
 
-app.get(
-  '/',
+app.get('/terms', (req, res) => {
+  res.render('pages/terms');
+});
+
+app.get('/auth/register', (req, res) => {
+  res.render('pages/register', { error: null, form: {} });
+});
+
+app.post(
+  '/auth/register',
   asyncHandler(async (req, res) => {
-    const { rows: latestListings } = await query(
-      `SELECT listings.*, users.username AS seller_name
-       FROM listings
-       JOIN users ON listings.seller_id = users.id
-       ORDER BY listings.created_at DESC
-       LIMIT 6`
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password;
+    const confirmPassword = req.body.confirmPassword;
+    if (!username || !email || !password || !confirmPassword) {
+      return res.render('pages/register', {
+        error: 'All fields are required.',
+        form: { username, email }
+      });
+    }
+    if (!isValidEmail(email)) {
+      return res.render('pages/register', {
+        error: 'Please enter a valid email.',
+        form: { username, email }
+      });
+    }
+    if (password.length < 8) {
+      return res.render('pages/register', {
+        error: 'Password must be at least 8 characters.',
+        form: { username, email }
+      });
+    }
+    if (password !== confirmPassword) {
+      return res.render('pages/register', {
+        error: 'Passwords do not match.',
+        form: { username, email }
+      });
+    }
+    const { rows: existingUsers } = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [
+      email
+    ]);
+    if (existingUsers.length) {
+      return res.render('pages/register', {
+        error: 'That email is already registered.',
+        form: { username, email }
+      });
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const { rows } = await query(
+      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
+      [username, email, passwordHash]
     );
-    const { rows: trendingListings } = await query(
-      `SELECT listings.*, users.username AS seller_name, COUNT(orders.id) AS order_count
-       FROM listings
-       JOIN users ON listings.seller_id = users.id
-       LEFT JOIN orders ON orders.listing_id = listings.id
-       GROUP BY listings.id, users.username
-       ORDER BY COUNT(orders.id) DESC, listings.created_at DESC
-       LIMIT 6`
+    const userId = rows[0].id;
+    const token = await createSession(userId);
+    setSessionCookie(req, res, token);
+    return res.redirect('/marketplace');
+  })
+);
+
+app.get('/auth/sign-in', (req, res) => {
+  res.render('pages/sign-in', { error: null });
+});
+
+app.post(
+  '/auth/sign-in',
+  asyncHandler(async (req, res) => {
+    const identifier = (req.body.identifier || '').trim();
+    const password = req.body.password;
+    if (!identifier || !password) {
+      return res.render('pages/sign-in', { error: 'All fields are required.' });
+    }
+    let user = null;
+    if (isValidEmail(identifier)) {
+      const { rows } = await query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [identifier]);
+      user = rows[0];
+    } else {
+      const { rows } = await query('SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [identifier]);
+      user = rows[0];
+    }
+    if (!user) {
+      return res.render('pages/sign-in', { error: 'Invalid credentials.' });
+    }
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    if (!isValid) {
+      return res.render('pages/sign-in', { error: 'Invalid credentials.' });
+    }
+    const token = await createSession(user.id);
+    setSessionCookie(req, res, token);
+    return res.redirect('/marketplace');
+  })
+);
+
+app.post('/auth/logout', (req, res) => {
+  clearSessionCookie(req, res);
+  return res.redirect('/');
+});
+
+app.get('/auth/forgot-password', (req, res) => {
+  res.render('pages/forgot-password', { error: null, success: null });
+});
+
+app.post(
+  '/auth/forgot-password',
+  asyncHandler(async (req, res) => {
+    const email = (req.body.email || '').trim().toLowerCase();
+    if (!email || !isValidEmail(email)) {
+      return res.render('pages/forgot-password', { 
+        error: 'Please enter a valid email.', 
+        success: null 
+      });
+    }
+    
+    let debugCode = null;
+    let successMessage = 'If that email exists, we sent a 6-digit reset code. Enter it below to reset your password.';
+    
+    const { rows } = await query('SELECT id, email FROM users WHERE email = $1', [email]);
+    const user = rows[0];
+    
+    if (user) {
+      const code = generateResetCode();
+      const codeHash = await bcrypt.hash(code, 10);
+      
+      await query('UPDATE password_reset_codes SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL', [
+        user.id
+      ]);
+      await query(
+        `INSERT INTO password_reset_codes (user_id, code_hash, expires_at)
+         VALUES ($1, $2, $3)`,
+        [user.id, codeHash, getResetCodeExpiry()]
+      );
+      
+      try {
+        await sendResetEmail({ email: user.email, code });
+      } catch (mailError) {
+        console.error('Password reset email failed:', mailError);
+        
+        if (process.env.NODE_ENV !== 'production') {
+          debugCode = code;
+          successMessage = 'Email delivery is not configured. Use the reset code below to continue.';
+        }
+      }
+    }
+    
+    return res.render('pages/reset-password', {
+      error: null,
+      success: successMessage,
+      email,
+      debugCode
+    });
+  })
+);
+
+app.get('/auth/reset-password', (req, res) => {
+  res.render('pages/reset-password', { error: null, success: null, email: req.query.email || '', debugCode: null });
+});
+
+app.post(
+  '/auth/reset-password',
+  asyncHandler(async (req, res) => {
+    const email = (req.body.email || '').trim().toLowerCase();
+    const code = (req.body.code || '').trim();
+    const password = req.body.password;
+    const confirmPassword = req.body.confirmPassword;
+    
+    if (!email || !isValidEmail(email)) {
+      return res.render('pages/reset-password', { 
+        error: 'Please enter a valid email.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    if (!code || !/^\d{6}$/.test(code)) {
+      return res.render('pages/reset-password', { 
+        error: 'Enter the 6-digit code from your email.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    if (!password || password.length < 8) {
+      return res.render('pages/reset-password', {
+        error: 'Password must be at least 8 characters.',
+        success: null,
+        email,
+        debugCode: null
+      });
+    }
+    if (password !== confirmPassword) {
+      return res.render('pages/reset-password', { 
+        error: 'Passwords do not match.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    
+    const { rows } = await query('SELECT id FROM users WHERE email = $1', [email]);
+    const user = rows[0];
+    if (!user) {
+      return res.render('pages/reset-password', { 
+        error: 'Invalid reset details.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    
+    const { rows: codeRows } = await query(
+      `SELECT id, code_hash, expires_at
+       FROM password_reset_codes
+       WHERE user_id = $1 AND used_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.id]
     );
-    const { rows: statsRows } = await query(
-      `SELECT
-        (SELECT COUNT(*) FROM listings) AS listings_count,
-        (SELECT COUNT(*) FROM users) AS users_count,
-        (SELECT COUNT(*) FROM orders) AS orders_count`
-    );
-    res.render('pages/landing', {
-      latestListings,
-      trendingListings,
-      stats: statsRows[0],
-      formatPrice,
-      categories: CATEGORIES
+    const resetRow = codeRows[0];
+    if (!resetRow) {
+      return res.render('pages/reset-password', { 
+        error: 'Reset code is invalid or expired.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    if (resetRow.expires_at && new Date(resetRow.expires_at).getTime() < Date.now()) {
+      return res.render('pages/reset-password', { 
+        error: 'Reset code is expired.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    const codeValid = await bcrypt.compare(code, resetRow.code_hash);
+    if (!codeValid) {
+      return res.render('pages/reset-password', { 
+        error: 'Reset code is invalid.', 
+        success: null, 
+        email,
+        debugCode: null 
+      });
+    }
+    
+    const newHash = await bcrypt.hash(password, 10);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
+    await query('UPDATE password_reset_codes SET used_at = NOW() WHERE id = $1', [resetRow.id]);
+    
+    return res.render('pages/reset-password', {
+      error: null,
+      success: 'Password updated successfully! You can now sign in with your new password.',
+      email,
+      debugCode: null
     });
   })
 );
@@ -438,46 +578,57 @@ app.get(
 app.get(
   '/marketplace',
   asyncHandler(async (req, res) => {
-    const search = req.query.search ? `%${req.query.search}%` : null;
-    const category = CATEGORIES.includes(req.query.category) ? req.query.category : null;
-    const condition = CONDITIONS.includes(req.query.condition) ? req.query.condition : null;
-    const { rows: listings } = await query(
-      `SELECT listings.*, users.username AS seller_name
-       FROM listings
-       JOIN users ON listings.seller_id = users.id
-       WHERE ($1::text IS NULL OR listings.title ILIKE $1 OR listings.description ILIKE $1)
-         AND ($2::text IS NULL OR listings.category = $2)
-         AND ($3::text IS NULL OR listings.condition = $3)
-       ORDER BY listings.created_at DESC`,
-      [search, category, condition]
-    );
+    const search = (req.query.search || '').trim();
+    const category = req.query.category || '';
+    let queryStr = `SELECT listings.*, users.username AS seller_name
+                    FROM listings
+                    JOIN users ON listings.seller_id = users.id
+                    WHERE 1=1`;
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      queryStr += ` AND (listings.title ILIKE $${params.length} OR listings.description ILIKE $${params.length})`;
+    }
+    if (category && CATEGORIES.includes(category)) {
+      params.push(category);
+      queryStr += ` AND listings.category = $${params.length}`;
+    }
+    queryStr += ` ORDER BY listings.created_at DESC`;
+    const { rows: listings } = await query(queryStr, params);
     res.render('pages/marketplace', {
       listings,
       formatPrice,
-      search: req.query.search || '',
       categories: CATEGORIES,
-      conditions: CONDITIONS,
-      selectedCategory: category,
-      selectedCondition: condition
+      currentCategory: category,
+      currentSearch: search
     });
   })
 );
 
-app.get('/listings/new', requireAuth, (req, res) => {
-  res.render('pages/create-listing', { error: null, categories: CATEGORIES, conditions: CONDITIONS, form: {} });
-});
+app.get(
+  '/listings/new',
+  requireAuth,
+  (req, res) => {
+    res.render('pages/create-listing', {
+      error: null,
+      categories: CATEGORIES,
+      conditions: CONDITIONS,
+      form: {}
+    });
+  }
+);
 
 app.post(
-  '/listings',
+  '/listings/new',
   requireAuth,
-  handleUpload(uploadListingImage, (req, res, message) =>
-    res.render('pages/create-listing', {
+  handleUpload(uploadListingImage, (req, res, message, next) => {
+    return res.render('pages/create-listing', {
       error: message,
       categories: CATEGORIES,
       conditions: CONDITIONS,
       form: req.body
-    })
-  ),
+    });
+  }),
   asyncHandler(async (req, res) => {
     const { title, description, price, category, condition, shippingDetails } = req.body;
     if (!title || !description || !price || !category || !condition || !shippingDetails) {
@@ -692,7 +843,7 @@ app.get(
   asyncHandler(async (req, res) => {
     const listingId = req.params.id;
     const { rows } = await query(
-      `SELECT listings.*, users.username AS seller_name, users.id AS seller_id
+      `SELECT listings.*, users.username AS seller_name, users.id AS seller_id, users.avatar_url AS seller_avatar
        FROM listings
        JOIN users ON listings.seller_id = users.id
        WHERE listings.id = $1`,
@@ -702,7 +853,7 @@ app.get(
     if (!listing) {
       return res.status(404).render('pages/error', { message: 'Listing not found.' });
     }
-    res.render('pages/listing-detail', { listing, formatPrice, currentUser: res.locals.currentUser });
+    res.render('pages/listing-detail', { listing, formatPrice });
   })
 );
 
@@ -718,354 +869,42 @@ app.post(
       return res.status(404).render('pages/error', { message: 'Listing not found.' });
     }
     if (listing.seller_id === buyerId) {
-      return res.redirect(`/listings/${listingId}`);
+      return res.status(400).render('pages/error', { message: 'You cannot buy your own listing.' });
     }
-    const orderResult = await query(
-      `INSERT INTO orders (listing_id, buyer_id, seller_id, status)
-       VALUES ($1, $2, $3, 'PAID')
-       RETURNING id`,
-      [listingId, buyerId, listing.seller_id]
+    const { rows: existingOrders } = await query(
+      'SELECT id FROM orders WHERE listing_id = $1 AND buyer_id = $2 LIMIT 1',
+      [listingId, buyerId]
     );
-    const orderId = orderResult.rows[0].id;
-    await query(
-      `INSERT INTO threads (listing_id, order_id, buyer_id, seller_id)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (listing_id, buyer_id, seller_id) DO UPDATE SET order_id = EXCLUDED.order_id
-       RETURNING id`,
-      [listingId, orderId, buyerId, listing.seller_id]
-    );
-    return res.redirect(`/orders/${orderId}`);
+    if (existingOrders.length) {
+      return res.redirect(`/orders`);
+    }
+    await query('INSERT INTO orders (listing_id, buyer_id, seller_id, status) VALUES ($1, $2, $3, $4)', [
+      listingId,
+      buyerId,
+      listing.seller_id,
+      'pending'
+    ]);
+    return res.redirect('/orders');
   })
 );
-
-app.post(
-  '/listings/:id/message',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const listingId = req.params.id;
-    const { rows } = await query('SELECT * FROM listings WHERE id = $1', [listingId]);
-    const listing = rows[0];
-    if (!listing) {
-      return res.status(404).render('pages/error', { message: 'Listing not found.' });
-    }
-    if (listing.seller_id === res.locals.currentUser.id) {
-      return res.redirect(`/listings/${listingId}`);
-    }
-    const threadResult = await query(
-      `INSERT INTO threads (listing_id, buyer_id, seller_id)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (listing_id, buyer_id, seller_id) DO UPDATE SET listing_id = EXCLUDED.listing_id
-       RETURNING id`,
-      [listingId, res.locals.currentUser.id, listing.seller_id]
-    );
-    return res.redirect(`/messages/${threadResult.rows[0].id}`);
-  })
-);
-
-app.get('/auth/register', (req, res) => {
-  res.render('pages/auth', {
-    activePanel: 'register',
-    loginError: null,
-    registerError: null,
-    login: '',
-    form: {}
-  });
-});
-
-app.get('/terms', (req, res) => {
-  res.render('pages/terms');
-});
-
-app.post(
-  '/auth/register',
-  asyncHandler(async (req, res) => {
-    const username = (req.body.username || '').trim();
-    const email = (req.body.email || '').trim().toLowerCase();
-    const password = req.body.password;
-    const passwordConfirm = req.body.passwordConfirm;
-
-    const renderRegister = (message) =>
-       res.render('pages/auth', {
-        activePanel: 'register',
-        loginError: null,
-        registerError: message,
-        login: '',
-       form: { username, email }  // ✓ FIXED
-    });
-
-    if (!username || !email || !password || !passwordConfirm) {
-      return renderRegister('All fields are required.');
-    }
-    if (!isValidEmail(email)) {
-      return renderRegister('Please enter a valid email.');
-    }
-    if (password !== passwordConfirm) {
-      return renderRegister('Passwords do not match.');
-    }
-    if (password.length < 8) {
-      return renderRegister('Password must be at least 8 characters.');
-    }
-    if (!termsAccepted) {
-      return renderRegister('You must agree to the Terms of Service to create an account.');
-    }
-
-    const { rows: loginConflicts } = await query(
-      'SELECT id FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2 OR LOWER(username) = $1 OR LOWER(email) = $2',
-      [email.toLowerCase(), username.toLowerCase()]
-    );
-    if (loginConflicts.length) {
-      return renderRegister('That username or email is already tied to another account.');
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    try {
-      const { rows } = await query(
-        'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
-        [username, email, passwordHash]
-      );
-
-      const token = await createSession(rows[0].id);
-      setSessionCookie(req, res, token);
-      return res.redirect('/settings');
-    } catch (err) {
-      return renderRegister('Username or email already in use.');
-    }
-  })
-);
-
-app.get('/auth/sign-in', (req, res) => {
-  res.render('pages/auth', {
-    activePanel: 'login',
-    loginError: null,
-    registerError: null,
-    login: '',
-    form: {}
-  });
-});
-
-app.post(
-  '/auth/sign-in',
-  asyncHandler(async (req, res) => {
-    const login = (req.body.login || '').trim();
-    const password = req.body.password;
-
-    const renderLogin = (message) =>
-      res.render('pages/auth', {
-        activePanel: 'login',
-        loginError: message,
-        registerError: null,
-        login,
-        form: {}
-      });
-
-    if (!login || !password) {
-      return renderLogin('Email/username and password required.');
-    }
-
-    const normalizedLogin = login.toLowerCase();
-    const { rows: emailMatches } = await query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedLogin]);
-    const { rows: usernameMatches } = await query('SELECT * FROM users WHERE LOWER(username) = $1', [normalizedLogin]);
-    const emailUser = emailMatches[0];
-    const usernameUser = usernameMatches[0];
-
-    if (!emailUser && !usernameUser) {
-      return renderLogin('Invalid credentials.');
-    }
-
-    if (emailUser && usernameUser && emailUser.id !== usernameUser.id) {
-      const emailOk = await bcrypt.compare(password, emailUser.password_hash);
-      const usernameOk = await bcrypt.compare(password, usernameUser.password_hash);
-      if (!emailOk && !usernameOk) {
-        return renderLogin('Invalid credentials.');
-      }
-      await mergeUsers(emailUser, usernameUser, {
-        passwordHash: emailOk ? emailUser.password_hash : usernameUser.password_hash
-      });
-      const { rows: mergedRows } = await query('SELECT * FROM users WHERE id = $1', [emailUser.id]);
-      const mergedUser = mergedRows[0];
-      const token = await createSession(mergedUser.id);
-      setSessionCookie(req, res, token);
-      return res.redirect('/');
-    }
-
-    const user = emailUser || usernameUser;
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return renderLogin('Invalid credentials.');
-
-    const token = await createSession(user.id);
-    setSessionCookie(req, res, token);
-    return res.redirect('/');
-  })
-);
-
-app.post('/auth/logout', asyncHandler(async (req, res) => {
-  const token = req.cookies[SESSION_COOKIE];
-  if (token) {
-    const tokenHash = hashSessionToken(token);
-    await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
-  }
-  clearSessionCookie(req, res);
-  res.redirect('/');
-}));
-
-app.get('/auth/forgot-password', (req, res) => {
-  res.render('pages/forgot-password', { error: null, success: null });
-});
-
-app.post(
-  '/auth/forgot-password',
-  asyncHandler(async (req, res) => {
-    const email = (req.body.email || '').trim().toLowerCase();
-    if (!email || !isValidEmail(email)) {
-      return res.render('pages/forgot-password', { 
-        error: 'Please enter a valid email.', 
-        success: null 
-      });
-    }
-    
-    let debugCode = null;  // ✓ ADDED
-    let successMessage = 'If that email exists, we sent a 6-digit reset code. Enter it below to reset your password.';
-    
-    const { rows } = await query('SELECT id, email FROM users WHERE email = $1', [email]);
-    const user = rows[0];
-    
-    if (user) {
-      const code = generateResetCode();
-      const codeHash = await bcrypt.hash(code, 10);
-      
-      await query('UPDATE password_reset_codes SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL', [
-        user.id
-      ]);
-      await query(
-        `INSERT INTO password_reset_codes (user_id, code_hash, expires_at)
-         VALUES ($1, $2, $3)`,
-        [user.id, codeHash, getResetCodeExpiry()]
-      );
-      
-      try {
-        await sendResetEmail({ email: user.email, code });
-      } catch (mailError) {
-        // ✓ ADDED: Better error handling
-        console.error('Password reset email failed:', mailError);
-        
-        // ✓ ADDED: In development, show the code directly if email fails
-        if (process.env.NODE_ENV !== 'production') {
-          debugCode = code;
-          successMessage = 'Email delivery is not configured. Use the reset code below to continue.';
-        }
-      }
-    }
-    
-    // ✓ FIXED: Pass debugCode to template
-    return res.render('pages/reset-password', {
-      error: null,
-      success: successMessage,
-      email,
-      debugCode  // ✓ Will show code in dev mode if email failed
-    });
-  })
-);
-
-
-app.get('/auth/reset-password', (req, res) => {
-  res.render('pages/reset-password', { error: null, success: null, email: req.query.email || '', debugCode: null });
-});
-
-app.post(
-  '/auth/reset-password',
-  asyncHandler(async (req, res) => {
-    const email = (req.body.email || '').trim().toLowerCase();
-    const code = (req.body.code || '').trim();
-    const password = req.body.password;
-    const confirmPassword = req.body.confirmPassword;
-    if (!email || !isValidEmail(email)) {
-      return res.render('pages/reset-password', { error: 'Please enter a valid email.', success: null, email });
-    }
-    if (!code || !/^\d{6}$/.test(code)) {
-      return res.render('pages/reset-password', { error: 'Enter the 6-digit code from your email.', success: null, email });
-    }
-    if (!password || password.length < 8) {
-      return res.render('pages/reset-password', {
-        error: 'Password must be at least 8 characters.',
-        success: null,
-        email
-      });
-    }
-    if (password !== confirmPassword) {
-      return res.render('pages/reset-password', { error: 'Passwords do not match.', success: null, email });
-    }
-    const { rows } = await query('SELECT id FROM users WHERE email = $1', [email]);
-    const user = rows[0];
-    if (!user) {
-      return res.render('pages/reset-password', { error: 'Invalid reset details.', success: null, email });
-    }
-    const { rows: codeRows } = await query(
-      `SELECT id, code_hash, expires_at
-       FROM password_reset_codes
-       WHERE user_id = $1 AND used_at IS NULL
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [user.id]
-    );
-    const resetRow = codeRows[0];
-    if (!resetRow) {
-      return res.render('pages/reset-password', { error: 'Reset code is invalid or expired.', success: null, email });
-    }
-    if (resetRow.expires_at && new Date(resetRow.expires_at).getTime() < Date.now()) {
-      return res.render('pages/reset-password', { error: 'Reset code is expired.', success: null, email });
-    }
-    const codeValid = await bcrypt.compare(code, resetRow.code_hash);
-    if (!codeValid) {
-      return res.render('pages/reset-password', { error: 'Reset code is invalid.', success: null, email });
-    }
-    const newHash = await bcrypt.hash(password, 10);
-    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user.id]);
-    await query('UPDATE password_reset_codes SET used_at = NOW() WHERE id = $1', [resetRow.id]);
-    return res.render('pages/reset-password', {
-      error: null,
-      success: 'Password updated. You can now sign in.',
-      email
-    });
-  })
-);
-
-async function autoConfirmExpiredOrders(userId) {
-  await query(
-    `UPDATE orders
-     SET status = 'CONFIRMED', confirmed_at = NOW()
-     WHERE status = 'DELIVERED'
-       AND delivered_at IS NOT NULL
-       AND delivered_at < NOW() - INTERVAL '24 hours'
-       AND (buyer_id = $1 OR seller_id = $1)`,
-    [userId]
-  );
-}
 
 app.get(
   '/orders',
   requireAuth,
   asyncHandler(async (req, res) => {
-    await autoConfirmExpiredOrders(res.locals.currentUser.id);
-    const { rows: buyerOrders } = await query(
-      `SELECT orders.*, listings.title, listings.image_url, listings.price_cents, users.username AS seller_name
+    const userId = res.locals.currentUser.id;
+    const { rows: orders } = await query(
+      `SELECT orders.*, listings.title, listings.image_url, listings.price_cents,
+              buyer.username AS buyer_name, seller.username AS seller_name
        FROM orders
        JOIN listings ON orders.listing_id = listings.id
-       JOIN users ON orders.seller_id = users.id
-       WHERE orders.buyer_id = $1
+       JOIN users AS buyer ON orders.buyer_id = buyer.id
+       JOIN users AS seller ON orders.seller_id = seller.id
+       WHERE orders.buyer_id = $1 OR orders.seller_id = $1
        ORDER BY orders.created_at DESC`,
-      [res.locals.currentUser.id]
+      [userId]
     );
-    const { rows: sellerOrders } = await query(
-      `SELECT orders.*, listings.title, listings.image_url, listings.price_cents, users.username AS buyer_name
-       FROM orders
-       JOIN listings ON orders.listing_id = listings.id
-       JOIN users ON orders.buyer_id = users.id
-       WHERE orders.seller_id = $1
-       ORDER BY orders.created_at DESC`,
-      [res.locals.currentUser.id]
-    );
-    res.render('pages/orders', { buyerOrders, sellerOrders, formatPrice });
+    res.render('pages/orders', { orders, formatPrice });
   })
 );
 
@@ -1073,15 +912,17 @@ app.get(
   '/orders/:id',
   requireAuth,
   asyncHandler(async (req, res) => {
-    await autoConfirmExpiredOrders(res.locals.currentUser.id);
     const orderId = req.params.id;
+    const userId = res.locals.currentUser.id;
     const { rows } = await query(
-      `SELECT orders.*, listings.title, listings.image_url, listings.price_cents, listings.shipping_details,
-              buyer.username AS buyer_name, seller.username AS seller_name
+      `SELECT orders.*, listings.title, listings.description, listings.image_url, listings.price_cents,
+              listings.category, listings.condition, listings.shipping_details,
+              buyer.username AS buyer_name, buyer.email AS buyer_email,
+              seller.username AS seller_name, seller.email AS seller_email
        FROM orders
        JOIN listings ON orders.listing_id = listings.id
-       JOIN users buyer ON orders.buyer_id = buyer.id
-       JOIN users seller ON orders.seller_id = seller.id
+       JOIN users AS buyer ON orders.buyer_id = buyer.id
+       JOIN users AS seller ON orders.seller_id = seller.id
        WHERE orders.id = $1`,
       [orderId]
     );
@@ -1089,13 +930,10 @@ app.get(
     if (!order) {
       return res.status(404).render('pages/error', { message: 'Order not found.' });
     }
-    if (order.buyer_id !== res.locals.currentUser.id && order.seller_id !== res.locals.currentUser.id) {
+    if (order.buyer_id !== userId && order.seller_id !== userId) {
       return res.status(403).render('pages/error', { message: 'You do not have access to this order.' });
     }
-    const now = Date.now();
-    const deliveredAt = order.delivered_at ? new Date(order.delivered_at).getTime() : null;
-    const remainingMs = deliveredAt ? Math.max(0, deliveredAt + 24 * 60 * 60 * 1000 - now) : null;
-    res.render('pages/order-detail', { order, formatPrice, currentUser: res.locals.currentUser, remainingMs });
+    res.render('pages/order-detail', { order, formatPrice });
   })
 );
 
@@ -1104,90 +942,29 @@ app.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const orderId = req.params.id;
-    const trackingCode = req.body.trackingCode || 'No tracking provided';
-    const { rows } = await query('SELECT * FROM orders WHERE id = $1', [orderId]);
+    const userId = res.locals.currentUser.id;
+    const { rows } = await query('SELECT * FROM orders WHERE id = $1 AND seller_id = $2', [orderId, userId]);
     const order = rows[0];
     if (!order) {
       return res.status(404).render('pages/error', { message: 'Order not found.' });
     }
-    if (order.seller_id !== res.locals.currentUser.id) {
-      return res.status(403).render('pages/error', { message: 'You do not have access to this order.' });
-    }
-    await query(
-      `UPDATE orders
-       SET status = 'SHIPPED', tracking_code = $1, shipped_at = NOW()
-       WHERE id = $2`,
-      [trackingCode, orderId]
-    );
+    await query('UPDATE orders SET status = $1 WHERE id = $2', ['shipped', orderId]);
     return res.redirect(`/orders/${orderId}`);
   })
 );
 
 app.post(
-  '/orders/:id/deliver',
+  '/orders/:id/complete',
   requireAuth,
   asyncHandler(async (req, res) => {
     const orderId = req.params.id;
-    const { rows } = await query('SELECT * FROM orders WHERE id = $1', [orderId]);
+    const userId = res.locals.currentUser.id;
+    const { rows } = await query('SELECT * FROM orders WHERE id = $1 AND buyer_id = $2', [orderId, userId]);
     const order = rows[0];
     if (!order) {
       return res.status(404).render('pages/error', { message: 'Order not found.' });
     }
-    if (order.seller_id !== res.locals.currentUser.id) {
-      return res.status(403).render('pages/error', { message: 'You do not have access to this order.' });
-    }
-    await query(
-      `UPDATE orders
-       SET status = 'DELIVERED', delivered_at = NOW()
-       WHERE id = $1`,
-      [orderId]
-    );
-    return res.redirect(`/orders/${orderId}`);
-  })
-);
-
-app.post(
-  '/orders/:id/confirm',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const orderId = req.params.id;
-    const { rows } = await query('SELECT * FROM orders WHERE id = $1', [orderId]);
-    const order = rows[0];
-    if (!order) {
-      return res.status(404).render('pages/error', { message: 'Order not found.' });
-    }
-    if (order.buyer_id !== res.locals.currentUser.id) {
-      return res.status(403).render('pages/error', { message: 'You do not have access to this order.' });
-    }
-    await query(
-      `UPDATE orders
-       SET status = 'CONFIRMED', confirmed_at = NOW()
-       WHERE id = $1`,
-      [orderId]
-    );
-    return res.redirect(`/orders/${orderId}`);
-  })
-);
-
-app.post(
-  '/orders/:id/dispute',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const orderId = req.params.id;
-    const { rows } = await query('SELECT * FROM orders WHERE id = $1', [orderId]);
-    const order = rows[0];
-    if (!order) {
-      return res.status(404).render('pages/error', { message: 'Order not found.' });
-    }
-    if (order.buyer_id !== res.locals.currentUser.id) {
-      return res.status(403).render('pages/error', { message: 'You do not have access to this order.' });
-    }
-    await query(
-      `UPDATE orders
-       SET status = 'DISPUTED', disputed_at = NOW()
-       WHERE id = $1`,
-      [orderId]
-    );
+    await query('UPDATE orders SET status = $1 WHERE id = $2', ['completed', orderId]);
     return res.redirect(`/orders/${orderId}`);
   })
 );
@@ -1196,27 +973,68 @@ app.get(
   '/messages',
   requireAuth,
   asyncHandler(async (req, res) => {
+    const userId = res.locals.currentUser.id;
     const { rows: threads } = await query(
-      `SELECT threads.*, listings.title AS listing_title,
-              latest.body AS latest_message,
-              latest.created_at AS latest_at,
-              SUM(CASE WHEN messages.is_read = false AND messages.sender_id != $1 THEN 1 ELSE 0 END) AS unread_count
+      `SELECT threads.*,
+              buyer.username AS buyer_name,
+              seller.username AS seller_name,
+              listings.title AS listing_title,
+              listings.image_url AS listing_image,
+              (SELECT COUNT(*) FROM messages WHERE messages.thread_id = threads.id AND messages.is_read = false AND messages.sender_id != $1) AS unread_count,
+              (SELECT body FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1) AS last_message,
+              (SELECT created_at FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1) AS last_message_at
        FROM threads
-       LEFT JOIN listings ON threads.listing_id = listings.id
-       LEFT JOIN LATERAL (
-         SELECT body, created_at
-         FROM messages
-         WHERE messages.thread_id = threads.id
-         ORDER BY created_at DESC
-         LIMIT 1
-       ) latest ON true
-       LEFT JOIN messages ON messages.thread_id = threads.id
+       JOIN users AS buyer ON threads.buyer_id = buyer.id
+       JOIN users AS seller ON threads.seller_id = seller.id
+       JOIN listings ON threads.listing_id = listings.id
        WHERE threads.buyer_id = $1 OR threads.seller_id = $1
-       GROUP BY threads.id, listings.title, latest.body, latest.created_at
-       ORDER BY COALESCE(latest.created_at, threads.created_at) DESC`,
-      [res.locals.currentUser.id]
+       ORDER BY COALESCE(
+         (SELECT created_at FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1),
+         threads.created_at
+       ) DESC`,
+      [userId]
     );
     res.render('pages/messages', { threads });
+  })
+);
+
+app.post(
+  '/messages/new',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const listingId = req.body.listing_id;
+    const body = (req.body.body || '').trim();
+    if (!body) {
+      return res.redirect(`/listings/${listingId}`);
+    }
+    const { rows: listingRows } = await query('SELECT * FROM listings WHERE id = $1', [listingId]);
+    const listing = listingRows[0];
+    if (!listing) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    if (listing.seller_id === res.locals.currentUser.id) {
+      return res.status(400).render('pages/error', { message: 'You cannot message yourself.' });
+    }
+    const { rows: existingThreads } = await query(
+      'SELECT id FROM threads WHERE listing_id = $1 AND buyer_id = $2 LIMIT 1',
+      [listingId, res.locals.currentUser.id]
+    );
+    let threadId;
+    if (existingThreads.length) {
+      threadId = existingThreads[0].id;
+    } else {
+      const { rows: newThreads } = await query(
+        'INSERT INTO threads (listing_id, buyer_id, seller_id) VALUES ($1, $2, $3) RETURNING id',
+        [listingId, res.locals.currentUser.id, listing.seller_id]
+      );
+      threadId = newThreads[0].id;
+    }
+    await query('INSERT INTO messages (thread_id, sender_id, body) VALUES ($1, $2, $3)', [
+      threadId,
+      res.locals.currentUser.id,
+      body
+    ]);
+    return res.redirect(`/messages/${threadId}`);
   })
 );
 
@@ -1226,13 +1044,16 @@ app.get(
   asyncHandler(async (req, res) => {
     const threadId = req.params.id;
     const { rows } = await query(
-      `SELECT threads.*, listings.title AS listing_title,
+      `SELECT threads.*,
               buyer.username AS buyer_name,
-              seller.username AS seller_name
+              seller.username AS seller_name,
+              listings.title AS listing_title,
+              listings.image_url AS listing_image,
+              listings.price_cents AS listing_price
        FROM threads
-       LEFT JOIN listings ON threads.listing_id = listings.id
-       JOIN users buyer ON threads.buyer_id = buyer.id
-       JOIN users seller ON threads.seller_id = seller.id
+       JOIN users AS buyer ON threads.buyer_id = buyer.id
+       JOIN users AS seller ON threads.seller_id = seller.id
+       JOIN listings ON threads.listing_id = listings.id
        WHERE threads.id = $1`,
       [threadId]
     );
@@ -1249,14 +1070,14 @@ app.get(
       [threadId, res.locals.currentUser.id]
     );
     const { rows: messages } = await query(
-      `SELECT messages.*, users.username AS sender_name
+      `SELECT messages.*, users.username AS sender_name, users.avatar_url AS sender_avatar
        FROM messages
        JOIN users ON messages.sender_id = users.id
        WHERE thread_id = $1
        ORDER BY created_at ASC`,
       [threadId]
     );
-    res.render('pages/thread', { thread, messages });
+    res.render('pages/thread', { thread, messages, formatPrice });
   })
 );
 
@@ -1376,6 +1197,7 @@ app.post(
       }
       if (res.locals.currentUser) {
         res.locals.currentUser.username = username;
+        res.locals.currentUser.bio = bio;
         if (avatarUrl) {
           res.locals.currentUser.avatar_url = avatarUrl;
         }
@@ -1453,33 +1275,7 @@ app.use((error, req, res, next) => {
   if (res.headersSent) {
     return next(error);
   }
-  console.error('Server error:', error);
-  const message =
-    error.code === '42P01'
-      ? 'The database is still warming up. Please retry in a moment.'
-      : error.message || 'Something went wrong. Please try again.';
-  return res.status(500).render('pages/error', { message });
-});
-
-app.listen(PORT, () => {
-  console.log(`Marketplace app running on http://localhost:${PORT}`);
-});
-
-
-
-
-function sanitizeInput(input, maxLength = 500) {
-  if (typeof input !== 'string') return '';
-  return input.trim().slice(0, maxLength);
-}
-
-// Add better error logging in production
-app.use((error, req, res, next) => {
-  if (res.headersSent) {
-    return next(error);
-  }
   
-  // ✓ Log errors with context in production
   if (process.env.NODE_ENV === 'production') {
     console.error({
       timestamp: new Date().toISOString(),
@@ -1498,5 +1294,9 @@ app.use((error, req, res, next) => {
     error.code === '42P01'
       ? 'The database is still warming up. Please retry in a moment.'
       : error.message || 'Something went wrong. Please try again.';
-  return res.status(500).render('pages/error', { message });
+  return res.status(error.status || 500).render('pages/error', { message });
+});
+
+app.listen(PORT, () => {
+  console.log(`Marketplace app running on http://localhost:${PORT}`);
 });

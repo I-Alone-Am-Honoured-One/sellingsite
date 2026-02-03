@@ -1,53 +1,201 @@
-const profileMenu = document.querySelector('.profile-menu');
-const mobileQuery = window.matchMedia('(max-width: 768px)');
-
-const syncDeviceClass = (event) => {
-  const isMobile = event.matches;
-  document.body.classList.toggle('is-mobile', isMobile);
-  document.body.dataset.device = isMobile ? 'mobile' : 'desktop';
-};
-
-syncDeviceClass(mobileQuery);
-mobileQuery.addEventListener('change', syncDeviceClass);
-
-if (profileMenu) {
-  const trigger = profileMenu.querySelector('.profile-trigger');
-  const dropdown = profileMenu.querySelector('.profile-dropdown');
-
-  const closeMenu = () => {
-    profileMenu.classList.remove('is-open');
-    trigger.setAttribute('aria-expanded', 'false');
-  };
-
-  trigger.setAttribute('aria-expanded', 'false');
-  trigger.setAttribute('aria-haspopup', 'true');
-
-  trigger.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (profileMenu.classList.contains('is-open')) {
-      window.location.href = '/profile';
-      return;
-    }
-    profileMenu.classList.add('is-open');
-    trigger.setAttribute('aria-expanded', 'true');
-  });
-
-  document.addEventListener('click', (event) => {
-    if (!profileMenu.contains(event.target)) {
-      closeMenu();
+// Profile menu dropdown handling
+document.addEventListener('DOMContentLoaded', () => {
+  // Desktop profile menu
+  const profileMenus = document.querySelectorAll('.profile-menu');
+  profileMenus.forEach(menu => {
+    const trigger = menu.querySelector('.profile-trigger');
+    if (trigger) {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('is-open');
+      });
     }
   });
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      closeMenu();
-      trigger.focus();
+  // Mobile profile menu
+  const mobileMenus = document.querySelectorAll('.profile-menu-mobile');
+  mobileMenus.forEach(menu => {
+    const trigger = menu.querySelector('.profile-trigger-mobile');
+    if (trigger) {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('is-open');
+      });
     }
   });
 
-  if (dropdown) {
-    dropdown.addEventListener('click', (event) => {
-      event.stopPropagation();
+  // Close menus when clicking outside
+  document.addEventListener('click', (e) => {
+    profileMenus.forEach(menu => {
+      if (!menu.contains(e.target)) {
+        menu.classList.remove('is-open');
+      }
+    });
+    mobileMenus.forEach(menu => {
+      if (!menu.contains(e.target)) {
+        menu.classList.remove('is-open');
+      }
+    });
+  });
+
+  // Close menus on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      profileMenus.forEach(menu => menu.classList.remove('is-open'));
+      mobileMenus.forEach(menu => menu.classList.remove('is-open'));
+    }
+  });
+
+  // Image preview for file uploads
+  const fileInputs = document.querySelectorAll('input[type="file"]');
+  fileInputs.forEach(input => {
+    input.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          // Find or create preview element
+          let preview = input.parentElement.querySelector('.image-preview');
+          if (!preview) {
+            preview = document.createElement('div');
+            preview.className = 'image-preview';
+            input.parentElement.appendChild(preview);
+          }
+          preview.innerHTML = `<img src="${event.target.result}" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 0.75rem; margin-top: 1rem; box-shadow: var(--shadow-md);">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  });
+
+  // Auto-resize textareas
+  const textareas = document.querySelectorAll('textarea');
+  textareas.forEach(textarea => {
+    textarea.addEventListener('input', () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
+  });
+
+  // Scroll to bottom of message threads
+  const threadMessages = document.querySelector('.thread-messages');
+  if (threadMessages) {
+    threadMessages.scrollTop = threadMessages.scrollHeight;
+  }
+
+  // Real-time form validation
+  const forms = document.querySelectorAll('form');
+  forms.forEach(form => {
+    const inputs = form.querySelectorAll('input[required], textarea[required], select[required]');
+    inputs.forEach(input => {
+      input.addEventListener('blur', () => {
+        if (!input.value.trim()) {
+          input.style.borderColor = 'var(--error)';
+        } else {
+          input.style.borderColor = '';
+        }
+      });
+      
+      input.addEventListener('input', () => {
+        if (input.value.trim()) {
+          input.style.borderColor = '';
+        }
+      });
+    });
+  });
+
+  // Price input formatting
+  const priceInputs = document.querySelectorAll('input[name="price"]');
+  priceInputs.forEach(input => {
+    input.addEventListener('blur', () => {
+      const value = parseFloat(input.value);
+      if (!isNaN(value)) {
+        input.value = value.toFixed(2);
+      }
+    });
+  });
+
+  // Confirm before deleting
+  const deleteButtons = document.querySelectorAll('button[formaction*="delete"], form[action*="delete"] button[type="submit"]');
+  deleteButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      if (!confirm('Are you sure you want to delete this? This action cannot be undone.')) {
+        e.preventDefault();
+      }
+    });
+  });
+
+  // Auto-dismiss alerts after 5 seconds
+  const alerts = document.querySelectorAll('.success, .error');
+  alerts.forEach(alert => {
+    setTimeout(() => {
+      alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      alert.style.opacity = '0';
+      alert.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        alert.remove();
+      }, 300);
+    }, 5000);
+  });
+
+  // Add loading state to buttons on form submit
+  forms.forEach(form => {
+    form.addEventListener('submit', (e) => {
+      const submitButton = form.querySelector('button[type="submit"]');
+      if (submitButton && !submitButton.disabled) {
+        submitButton.disabled = true;
+        const originalText = submitButton.textContent;
+        submitButton.textContent = 'Loading...';
+        submitButton.style.opacity = '0.7';
+        
+        // Re-enable after 3 seconds as a fallback
+        setTimeout(() => {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+          submitButton.style.opacity = '1';
+        }, 3000);
+      }
+    });
+  });
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+
+  // Add touch feedback for mobile
+  if ('ontouchstart' in window) {
+    const touchables = document.querySelectorAll('button, a, .card, .listing-card-mini');
+    touchables.forEach(element => {
+      element.addEventListener('touchstart', () => {
+        element.style.opacity = '0.8';
+      });
+      element.addEventListener('touchend', () => {
+        element.style.opacity = '1';
+      });
     });
   }
-}
+
+  // Prevent double-click spam
+  const clickableElements = document.querySelectorAll('button, a');
+  clickableElements.forEach(element => {
+    let clickTimeout;
+    element.addEventListener('click', () => {
+      if (clickTimeout) {
+        return;
+      }
+      clickTimeout = setTimeout(() => {
+        clickTimeout = null;
+      }, 300);
+    });
+  });
+});
