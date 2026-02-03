@@ -1,0 +1,103 @@
+<%- include('../partials/header') %>
+
+<%
+  const panel = (activePanel === 'register') ? 'register' : 'login';
+%>
+
+<section class="container section narrow" data-auth>
+  <div class="section-header">
+    <div>
+      <h1><%= panel === 'register' ? 'Create your account' : 'Welcome back' %></h1>
+      <p class="muted">Sign in or create an account to buy, sell, and message securely.</p>
+    </div>
+  </div>
+
+  <div class="auth-tabs" role="tablist" aria-label="Authentication tabs">
+    <button
+      type="button"
+      class="button <%= panel === 'login' ? 'primary' : 'ghost' %> auth-tab"
+      data-panel="login"
+    >
+      Sign in
+    </button>
+    <button
+      type="button"
+      class="button <%= panel === 'register' ? 'primary' : 'ghost' %> auth-tab"
+      data-panel="register"
+    >
+      Register
+    </button>
+  </div>
+
+  <form
+    id="login-form"
+    class="form-card auth-form <%= panel === 'login' ? 'active' : '' %>"
+    method="POST"
+    action="/auth/sign-in"
+  >
+    <% if (loginError) { %>
+      <div class="error"><%= loginError %></div>
+    <% } %>
+
+    <label>
+      Email or username
+      <input type="text" name="login" value="<%= login || '' %>" required />
+    </label>
+
+    <label>
+      Password
+      <input type="password" name="password" required />
+    </label>
+
+    <button class="button primary" type="submit">Sign in</button>
+
+    <div class="auth-footer-row">
+      <span class="muted">
+        Don’t have an account?
+        <button type="button" class="auth-link" data-panel="register">Create one</button>
+      </span>
+      <a href="/auth/forgot-password">Forgot password?</a>
+    </div>
+  </form>
+
+  <form
+    id="register-form"
+    class="form-card auth-form <%= panel === 'register' ? 'active' : '' %>"
+    method="POST"
+    action="/auth/register"
+  >
+    <% if (registerError) { %>
+      <div class="error"><%= registerError %></div>
+    <% } %>
+
+    <label>
+      Username
+      <input type="text" name="username" value="<%= form?.username || '' %>" required />
+    </label>
+
+    <label>
+      Email
+      <input type="email" name="email" value="<%= form?.email || '' %>" required />
+    </label>
+
+    <label>
+      Password
+      <input type="password" name="password" required />
+      <span class="helper">Use at least 8 characters.</span>
+    </label>
+
+    <button class="button primary" type="submit">Register</button>
+
+    <div class="auth-footer-row">
+      <span class="muted">
+        Already have an account?
+        <button type="button" class="auth-link" data-panel="login">Sign in</button>
+      </span>
+      <span></span>
+    </div>
+  </form>
+
+  <script src="/auth.js" defer></script>
+</section>
+
+<%- include('../partials/footer') %>
