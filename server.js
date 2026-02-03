@@ -890,6 +890,8 @@ app.post(
     if (!email || !isValidEmail(email)) {
       return res.render('pages/forgot-password', { error: 'Please enter a valid email.', success: null });
     }
+    let debugCode = null;
+    let successMessage = 'If that email exists, we sent a 6-digit reset code. Enter it below to reset your password.';
     const { rows } = await query('SELECT id, email FROM users WHERE email = $1', [email]);
     const user = rows[0];
     if (user) {
@@ -909,17 +911,23 @@ app.post(
         // Don't take down the whole request if SMTP is misconfigured/unreachable.
         // Log so you can see what's wrong in Render logs.
         console.error('Password reset email failed:', mailError);
+        if (process.env.NODE_ENV !== 'production') {
+          debugCode = code;
+          successMessage = 'Email delivery is not configured. Use the reset code below to continue.';
+        }
       }
     }
-    return res.render('pages/forgot-password', {
+    return res.render('pages/reset-password', {
       error: null,
-      success: 'If that email exists, we sent a 6-digit reset code.'
+      success: successMessage,
+      email,
+      debugCode
     });
   })
 );
 
 app.get('/auth/reset-password', (req, res) => {
-  res.render('pages/reset-password', { error: null, success: null, email: req.query.email || '' });
+  res.render('pages/reset-password', { error: null, success: null, email: req.query.email || '', debugCode: null });
 });
 
 app.post(
