@@ -759,6 +759,7 @@ app.post(
     const username = (req.body.username || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password;
+    const passwordConfirm = req.body.passwordConfirm;
 
     const renderRegister = (message) =>
       res.render('pages/auth', {
@@ -769,11 +770,14 @@ app.post(
         form: { username, email }
       });
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !passwordConfirm) {
       return renderRegister('All fields are required.');
     }
     if (!isValidEmail(email)) {
       return renderRegister('Please enter a valid email.');
+    }
+    if (password !== passwordConfirm) {
+      return renderRegister('Passwords do not match.');
     }
     if (password.length < 8) {
       return renderRegister('Password must be at least 8 characters.');
