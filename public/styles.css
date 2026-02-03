@@ -830,6 +830,42 @@ img {
   font-family: inherit;
 }
 
+.form-card input[type="file"] {
+  padding: 0.5rem;
+  border-style: dashed;
+  cursor: pointer;
+}
+
+.form-card input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-card input[type="file"]::-webkit-file-upload-button {
+  margin-right: 0.75rem;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-card input[type="file"]::file-selector-button:hover,
+.form-card input[type="file"]::-webkit-file-upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(88, 101, 242, 0.25);
+}
+
 .form-card input:focus,
 .form-card textarea:focus,
 .form-card select:focus {
@@ -1434,6 +1470,16 @@ img {
   border: 1px solid var(--border);
 }
 
+.settings-listing-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-listing-actions form {
+  margin: 0;
+}
+
 .settings-listing img {
   width: 56px;
   height: 56px;
@@ -1462,6 +1508,10 @@ img {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
+}
+
+.inline-form {
+  display: contents;
 }
 
 .checkbox {

@@ -103,7 +103,12 @@
                 <h4><%= listing.title %></h4>
                 <p class="muted"><%= formatPrice(listing.price_cents) %></p>
               </div>
-              <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+              <div class="settings-listing-actions">
+                <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+                <form method="POST" action="/listings/<%= listing.id %>/delete" onsubmit="return confirm('Delete this listing? This cannot be undone.');">
+                  <button class="button danger ghost small" type="submit">Delete</button>
+                </form>
+              </div>
             </div>
           <% }) %>
         </div>
