@@ -1766,3 +1766,54 @@ img {
 .auth-footer-row a:hover {
   color: var(--text);
 }
+/* ===== Auth page toggle (ported from Temp UI behavior) ===== */
+.auth-tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.auth-tabs .button {
+  flex: 1;
+  justify-content: center;
+}
+
+.auth-form {
+  display: none;
+}
+
+.auth-form.active {
+  display: grid;
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-link:hover {
+  filter: brightness(1.1);
+}
+
+.auth-footer-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.auth-footer-row a {
+  color: var(--muted);
+}
+
+.auth-footer-row a:hover {
+  color: var(--text);
+}

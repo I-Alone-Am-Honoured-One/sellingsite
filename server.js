@@ -109,25 +109,33 @@ async function createSession(userId) {
   return token;
 }
 
-function setSessionCookie(res, token) {
+function resolveCookieSecure(req) {
+  if (process.env.COOKIE_SECURE === 'true') return true;
+  if (process.env.COOKIE_SECURE === 'false') return false;
+
+  // Default: secure cookies only when in production AND the current request is HTTPS.
+  // With `app.set('trust proxy', 1)`, req.secure should be true behind common proxies when they send X-Forwarded-Proto=https.
+  return process.env.NODE_ENV === 'production' && Boolean(req.secure);
+}
+
+function setSessionCookie(req, res, token) {
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     maxAge: SESSION_MAX_AGE_MS,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production for HTTPS
+    secure: resolveCookieSecure(req),
     path: '/'
   });
 }
 
-function clearSessionCookie(res) {
+function clearSessionCookie(req, res) {
   res.clearCookie(SESSION_COOKIE, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production', // Match secure flag to ensure cookie is cleared
+    secure: resolveCookieSecure(req),
     path: '/'
   });
 }
-
 function asyncHandler(handler) {
   return (req, res, next) => {
     Promise.resolve(handler(req, res, next)).catch(next);
@@ -229,13 +237,13 @@ async function hydrateUser(req, res, next) {
     );
     const session = rows[0];
     if (!session) {
-      clearSessionCookie(res);
+      clearSessionCookie(req, res);
       res.locals.currentUser = null;
       return next();
     }
     if (session.expires_at && new Date(session.expires_at).getTime() < Date.now()) {
       await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
-      clearSessionCookie(res);
+      clearSessionCookie(req, res);
       res.locals.currentUser = null;
       return next();
     }
@@ -248,7 +256,7 @@ async function hydrateUser(req, res, next) {
   } catch (error) {
     console.error('Session hydration error:', error);
     res.locals.currentUser = null;
-    clearSessionCookie(res);
+    clearSessionCookie(req, res);
   }
   return next();
 }
@@ -522,18 +530,65 @@ app.post(
 
     try {
       const { rows } = await query(
-        'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
+        'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
         [username, email, passwordHash]
       );
 
       const token = await createSession(rows[0].id);
-      setSessionCookie(res, token);
+      setSessionCookie(req, res, token);
       return res.redirect('/settings');
-    } catch (error) {
+    } catch (err) {
       return renderRegister('Username or email already in use.');
     }
   })
 );
+
+app.get('/auth/sign-in', (req, res) => {
+  res.render('pages/auth', {
+    activePanel: 'login',
+    loginError: null,
+    registerError: null,
+    login: '',
+    form: {}
+  });
+});
+
+app.post(
+  '/auth/sign-in',
+  asyncHandler(async (req, res) => {
+    const login = (req.body.login || '').trim();
+    const password = req.body.password;
+
+    const renderLogin = (message) =>
+      res.render('pages/auth', {
+        activePanel: 'login',
+        loginError: message,
+        registerError: null,
+        login,
+        form: {}
+      });
+
+    if (!login || !password) {
+      return renderLogin('Email/username and password required.');
+    }
+
+    const { rows } = await query(
+      'SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1',
+      [login.toLowerCase()]
+    );
+
+    const user = rows[0];
+    if (!user) return renderLogin('Invalid credentials.');
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) return renderLogin('Invalid credentials.');
+
+    const token = await createSession(user.id);
+    setSessionCookie(req, res, token);
+    return res.redirect('/');
+  })
+);
+
 
 app.get('/auth/sign-in', (req, res) => {
   res.render('pages/auth', {
@@ -592,7 +647,7 @@ app.post('/auth/logout', asyncHandler(async (req, res) => {
     const tokenHash = hashSessionToken(token);
     await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
   }
-  clearSessionCookie(res);
+  clearSessionCookie(req, res);
   res.redirect('/');
 }));
 
