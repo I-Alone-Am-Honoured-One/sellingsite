@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
@@ -14,17 +14,9 @@ const { query } = require('./db');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
 const RESET_CODE_TTL_MINUTES = 15;
-const isProduction = process.env.NODE_ENV === 'production';
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: isProduction,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-  path: '/'
-};
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
@@ -84,9 +76,74 @@ function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function createToken(user) {
-  return jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, {
-    expiresIn: '7d'
+const SESSION_ID_COOKIE = 'session_id';
+const sessionStore = new Map();
+const SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, session] of sessionStore.entries()) {
+    if (session.expiresAt <= now) {
+      sessionStore.delete(sessionId);
+    }
+  }
+}, SESSION_CLEANUP_INTERVAL_MS).unref();
+
+function isSecureRequest(req) {
+  return req.secure || req.headers['x-forwarded-proto'] === 'https';
+}
+
+function createSession(userId) {
+  const sessionId = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + SESSION_MAX_AGE_MS;
+  sessionStore.set(sessionId, { userId, expiresAt });
+  return sessionId;
+}
+
+function getSession(sessionId) {
+  if (!sessionId) {
+    return null;
+  }
+  const session = sessionStore.get(sessionId);
+  if (!session) {
+    return null;
+  }
+  if (session.expiresAt <= Date.now()) {
+    sessionStore.delete(sessionId);
+    return null;
+  }
+  return session;
+}
+
+function destroySession(sessionId) {
+  if (!sessionId) {
+    return;
+  }
+  sessionStore.delete(sessionId);
+}
+
+function setSessionCookie(res, req, sessionId) {
+  res.cookie(SESSION_ID_COOKIE, sessionId, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isSecureRequest(req),
+    maxAge: SESSION_MAX_AGE_MS,
+    path: '/'
+  });
+}
+
+function clearSessionCookie(res) {
+  res.clearCookie(SESSION_ID_COOKIE, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false,
+    path: '/'
+  });
+  res.clearCookie(SESSION_ID_COOKIE, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: true,
+    path: '/'
   });
 }
 
@@ -174,18 +231,30 @@ function handleUpload(uploadFn, onError) {
 }
 
 async function hydrateUser(req, res, next) {
-  const token = req.cookies.session;
-  if (!token) {
+  const sessionId = req.cookies[SESSION_ID_COOKIE];
+  const session = getSession(sessionId);
+  if (!session) {
+    if (sessionId) {
+      clearSessionCookie(res);
+    }
     res.locals.currentUser = null;
     return next();
   }
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    const { rows } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [payload.id]);
-    res.locals.currentUser = rows[0] || null;
+    const userId = session.userId;
+    const { rows } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [userId]);
+    const user = rows[0];
+    if (!user) {
+      destroySession(sessionId);
+      clearSessionCookie(res);
+      res.locals.currentUser = null;
+      return next();
+    }
+    res.locals.currentUser = user;
   } catch (error) {
     res.locals.currentUser = null;
-    res.clearCookie('session', COOKIE_OPTIONS);
+    destroySession(sessionId);
+    clearSessionCookie(res);
   }
   return next();
 }
@@ -444,8 +513,8 @@ app.post(
         'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
         [username, email, passwordHash]
       );
-      const token = createToken(rows[0]);
-      res.cookie('session', token, COOKIE_OPTIONS);
+      const sessionId = createSession(rows[0].id);
+      setSessionCookie(res, req, sessionId);
       return res.redirect('/');
     } catch (error) {
       return res.render('pages/register', { error: 'Username or email already in use.' });
@@ -474,14 +543,16 @@ app.post(
     if (!isValid) {
       return res.render('pages/sign-in', { error: 'Invalid credentials.' });
     }
-    const token = createToken(user);
-    res.cookie('session', token, COOKIE_OPTIONS);
+    const sessionId = createSession(user.id);
+    setSessionCookie(res, req, sessionId);
     return res.redirect('/');
   })
 );
 
 app.post('/auth/logout', (req, res) => {
-  res.clearCookie('session', COOKIE_OPTIONS);
+  const sessionId = req.cookies[SESSION_ID_COOKIE];
+  destroySession(sessionId);
+  clearSessionCookie(res);
   res.redirect('/');
 });
 
