@@ -15,6 +15,7 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
+const COOKIE_SECRET = process.env.COOKIE_SECRET || 'dev-cookie-secret-change-me';
 const RESET_CODE_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = 'session';
