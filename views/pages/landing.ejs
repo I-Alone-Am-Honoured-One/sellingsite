@@ -18,7 +18,7 @@
       </div>
       <div class="hero-stats">
         <div>
-          <h3><%= stats?.users_count || 0 %>+</h3>
+          <h3><%= stats?.users_count || 0 %>+</h3> <!-- Use optional chaining to avoid errors if stats is missing -->
           <p>Active traders</p>
         </div>
         <div>
@@ -54,7 +54,7 @@
     </div>
   </div>
   <div class="category-grid">
-    <% categories.forEach(category => { %>
+    <% (categories || []).forEach(category => { %> <!-- Safely iterate even if categories is undefined -->
       <a class="category-card" href="/marketplace?category=<%= encodeURIComponent(category) %>">
         <h3><%= category %></h3>
         <p>Shop the hottest <%= category.toLowerCase() %> drops.</p>
