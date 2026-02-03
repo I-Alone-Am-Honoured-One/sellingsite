@@ -16,6 +16,7 @@
 
   <div class="profile-grid">
     <div class="profile-card">
+      <% const joinedDate = user.created_at ? new Date(user.created_at) : null; %>
       <div class="profile-identity">
         <div class="profile-avatar">
           <% if (user.avatar_url) { %>
@@ -27,7 +28,10 @@
         <div>
           <h2><%= user.username %></h2>
           <p class="muted"><%= user.email %></p>
-          <p class="meta">Joined <%= new Date(user.created_at).toLocaleDateString() %></p>
+          <p class="meta">
+            Joined
+            <%= joinedDate && !Number.isNaN(joinedDate.getTime()) ? joinedDate.toLocaleDateString() : '—' %>
+          </p>
         </div>
       </div>
       <p class="profile-bio"><%= user.bio || 'Add a short bio to help buyers get to know you.' %></p>
@@ -44,16 +48,11 @@
     </div>
 
     <div class="profile-card">
-      <h3>Update avatar</h3>
-      <p class="muted">Upload a new image to personalize your profile.</p>
-      <form class="form-card" method="POST" action="/profile/avatar" enctype="multipart/form-data">
-        <label>
-          Avatar image
-          <input class="file-input" type="file" name="avatar" accept="image/*" required />
-          <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
-        </label>
-        <button class="button primary" type="submit">Upload avatar</button>
-      </form>
+      <h3>Profile settings</h3>
+      <p class="muted">Update your avatar, bio, and notification preferences in settings.</p>
+      <div class="profile-actions">
+        <a class="button primary" href="/settings">Go to settings</a>
+      </div>
     </div>
 
     <div class="profile-card">
@@ -62,14 +61,16 @@
       <% if (listings.length) { %>
         <div class="profile-listings">
           <% listings.forEach(listing => { %>
-            <div class="settings-listing">
+            <div class="profile-listing-card">
               <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
-              <div>
+              <div class="profile-listing-details">
                 <h4><%= listing.title %></h4>
                 <p class="muted"><%= formatPrice(listing.price_cents) %></p>
                 <p class="meta">Listed <%= new Date(listing.created_at).toLocaleDateString() %></p>
               </div>
-              <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+              <div class="profile-listing-actions">
+                <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+              </div>
             </div>
           <% }) %>
         </div>

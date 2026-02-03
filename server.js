@@ -9,7 +9,7 @@ const multer = require('multer');
 const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
-const { query } = require('./db');
+const { pool, query } = require('./db');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -224,6 +224,72 @@ function handleUpload(uploadFn, onError) {
   };
 }
 
+function isEmailLike(value) {
+  return Boolean(value && value.includes('@'));
+}
+
+function pickMergedUsername(primaryUsername, secondaryUsername) {
+  if (!primaryUsername) return secondaryUsername;
+  if (!secondaryUsername) return primaryUsername;
+  if (isEmailLike(primaryUsername) && !isEmailLike(secondaryUsername)) {
+    return secondaryUsername;
+  }
+  return primaryUsername;
+}
+
+async function mergeUsers(primaryUser, secondaryUser, { passwordHash } = {}) {
+  if (!primaryUser || !secondaryUser || primaryUser.id === secondaryUser.id) return;
+  const mergedUsername = pickMergedUsername(primaryUser.username, secondaryUser.username);
+  const mergedAvatar = primaryUser.avatar_url || secondaryUser.avatar_url;
+  const mergedBio = primaryUser.bio || secondaryUser.bio;
+  const mergedPasswordHash = passwordHash || primaryUser.password_hash;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `DELETE FROM threads t
+       USING threads existing
+       WHERE t.buyer_id = $2
+         AND existing.buyer_id = $1
+         AND t.seller_id = existing.seller_id
+         AND t.listing_id IS NOT DISTINCT FROM existing.listing_id`,
+      [primaryUser.id, secondaryUser.id]
+    );
+    await client.query(
+      `DELETE FROM threads t
+       USING threads existing
+       WHERE t.seller_id = $2
+         AND existing.seller_id = $1
+         AND t.buyer_id = existing.buyer_id
+         AND t.listing_id IS NOT DISTINCT FROM existing.listing_id`,
+      [primaryUser.id, secondaryUser.id]
+    );
+    await client.query('UPDATE listings SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('UPDATE orders SET buyer_id = $1 WHERE buyer_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('UPDATE orders SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('UPDATE threads SET buyer_id = $1 WHERE buyer_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('UPDATE threads SET seller_id = $1 WHERE seller_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('UPDATE messages SET sender_id = $1 WHERE sender_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('UPDATE password_reset_codes SET user_id = $1 WHERE user_id = $2', [
+      primaryUser.id,
+      secondaryUser.id
+    ]);
+    await client.query('UPDATE sessions SET user_id = $1 WHERE user_id = $2', [primaryUser.id, secondaryUser.id]);
+    await client.query('DELETE FROM users WHERE id = $1', [secondaryUser.id]);
+    await client.query(
+      'UPDATE users SET username = $1, avatar_url = $2, bio = $3, password_hash = $4 WHERE id = $5',
+      [mergedUsername, mergedAvatar, mergedBio, mergedPasswordHash, primaryUser.id]
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 async function getSettingsPayload(userId) {
   const { rows: users } = await query(
     'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
@@ -237,7 +303,10 @@ async function getSettingsPayload(userId) {
 }
 
 async function getProfilePayload(userId) {
-  const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [userId]);
+  const { rows: users } = await query(
+    'SELECT id, username, email, avatar_url, bio, created_at FROM users WHERE id = $1',
+    [userId]
+  );
   const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
   const { rows: orderStats } = await query(
     'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
@@ -246,7 +315,7 @@ async function getProfilePayload(userId) {
   // Used by views/pages/profile.ejs to render "Your listings".
   // Always return an array so the template can safely do `listings.length`.
   const { rows: listings } = await query(
-    'SELECT id, title, image_url, price_cents FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
+    'SELECT id, title, image_url, price_cents, created_at FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
     [userId]
   );
   return {
@@ -710,6 +779,14 @@ app.post(
       return renderRegister('Password must be at least 8 characters.');
     }
 
+    const { rows: loginConflicts } = await query(
+      'SELECT id FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2 OR LOWER(username) = $1 OR LOWER(email) = $2',
+      [email.toLowerCase(), username.toLowerCase()]
+    );
+    if (loginConflicts.length) {
+      return renderRegister('That username or email is already tied to another account.');
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
 
     try {
@@ -756,14 +833,33 @@ app.post(
       return renderLogin('Email/username and password required.');
     }
 
-    const { rows } = await query(
-      'SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1',
-      [login.toLowerCase()]
-    );
+    const normalizedLogin = login.toLowerCase();
+    const { rows: emailMatches } = await query('SELECT * FROM users WHERE LOWER(email) = $1', [normalizedLogin]);
+    const { rows: usernameMatches } = await query('SELECT * FROM users WHERE LOWER(username) = $1', [normalizedLogin]);
+    const emailUser = emailMatches[0];
+    const usernameUser = usernameMatches[0];
 
-    const user = rows[0];
-    if (!user) return renderLogin('Invalid credentials.');
+    if (!emailUser && !usernameUser) {
+      return renderLogin('Invalid credentials.');
+    }
 
+    if (emailUser && usernameUser && emailUser.id !== usernameUser.id) {
+      const emailOk = await bcrypt.compare(password, emailUser.password_hash);
+      const usernameOk = await bcrypt.compare(password, usernameUser.password_hash);
+      if (!emailOk && !usernameOk) {
+        return renderLogin('Invalid credentials.');
+      }
+      await mergeUsers(emailUser, usernameUser, {
+        passwordHash: emailOk ? emailUser.password_hash : usernameUser.password_hash
+      });
+      const { rows: mergedRows } = await query('SELECT * FROM users WHERE id = $1', [emailUser.id]);
+      const mergedUser = mergedRows[0];
+      const token = await createSession(mergedUser.id);
+      setSessionCookie(req, res, token);
+      return res.redirect('/');
+    }
+
+    const user = emailUser || usernameUser;
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return renderLogin('Invalid credentials.');
 
@@ -1160,59 +1256,7 @@ app.get(
 app.post(
   '/profile/avatar',
   requireAuth,
-  (req, res, next) => {
-    uploadAvatarImage(req, res, async (error) => {
-      if (!error) {
-        return next();
-      }
-      const message =
-        error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
-      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
-      return res.render('pages/profile', {
-        user,
-        listingCount,
-        orderCount,
-        listings,
-        formatPrice,
-        error: message,
-        success: null
-      });
-    });
-  },
-  asyncHandler(async (req, res) => {
-    if (!req.file) {
-      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
-      return res.render('pages/profile', {
-        user,
-        listingCount,
-        orderCount,
-        listings,
-        formatPrice,
-        error: 'Please upload an avatar image.',
-        success: null
-      });
-    }
-    let avatarUrl;
-    try {
-      avatarUrl = await uploadImage(req.file);
-    } catch (error) {
-      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
-      return res.render('pages/profile', {
-        user,
-        listingCount,
-        orderCount,
-        listings,
-        formatPrice,
-        error: 'Avatar upload failed. Please try again.',
-        success: null
-      });
-    }
-    await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, res.locals.currentUser.id]);
-    if (res.locals.currentUser) {
-      res.locals.currentUser.avatar_url = avatarUrl;
-    }
-    res.redirect('/profile');
-  })
+  (req, res) => res.redirect('/settings')
 );
 
 app.get(
