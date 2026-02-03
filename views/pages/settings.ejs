@@ -3,7 +3,7 @@
   <div class="section-header">
     <div>
       <h1>Settings</h1>
-      <p class="muted">Update your login, email, and notification preferences.</p>
+      <p class="muted">Update your account details, login info, and notification preferences.</p>
     </div>
   </div>
 
@@ -15,6 +15,32 @@
   <% } %>
 
   <div class="settings-grid">
+    <form class="form-card" method="POST" action="/settings/profile" enctype="multipart/form-data">
+      <h3>Account profile</h3>
+      <div class="profile-avatar">
+        <% if (user.avatar_url) { %>
+          <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
+        <% } else { %>
+          <span><%= user.username.slice(0, 1).toUpperCase() %></span>
+        <% } %>
+      </div>
+      <label>
+        Username
+        <input type="text" name="username" value="<%= user.username %>" required />
+        <span class="helper">Usernames must be unique.</span>
+      </label>
+      <label>
+        Bio
+        <textarea name="bio" rows="4" placeholder="Tell the community about yourself."><%= user.bio || '' %></textarea>
+      </label>
+      <label>
+        Avatar image
+        <input type="file" name="avatar" accept="image/*" />
+        <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
+      </label>
+      <button class="button primary" type="submit">Save profile</button>
+    </form>
+
     <form class="form-card" method="POST" action="/settings">
       <input type="hidden" name="action" value="password" />
       <h3>Change password</h3>
