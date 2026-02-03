@@ -18,7 +18,6 @@ const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
 const RESET_CODE_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = 'session';
-const SECURE_SESSION_COOKIE = 'session_secure';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
@@ -109,32 +108,21 @@ async function createSession(userId) {
   return token;
 }
 
-function isSecureRequest(req) {
-  return req.secure || req.headers['x-forwarded-proto'] === 'https';
-}
-
-function buildSessionCookieOptions({ sameSite, secure }) {
-  return {
+function setSessionCookie(res, token) {
+  res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    sameSite,
-    secure,
     maxAge: SESSION_MAX_AGE_MS,
+    sameSite: 'lax',
     path: '/'
-  };
+  });
 }
 
-function setSessionCookie(res, req, token) {
-  res.cookie(SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
-  if (isSecureRequest(req)) {
-    res.cookie(SECURE_SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-  } else {
-    res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-  }
-}
-
-function clearSessionCookie(res, req) {
-  res.clearCookie(SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
-  res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
+function clearSessionCookie(res) {
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/'
+  });
 }
 
 function asyncHandler(handler) {
@@ -221,7 +209,7 @@ function handleUpload(uploadFn, onError) {
 }
 
 async function hydrateUser(req, res, next) {
-  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
+  const token = req.cookies[SESSION_COOKIE];
   if (!token) {
     res.locals.currentUser = null;
     return next();
@@ -238,13 +226,13 @@ async function hydrateUser(req, res, next) {
     );
     const session = rows[0];
     if (!session) {
-      clearSessionCookie(res, req);
+      clearSessionCookie(res);
       res.locals.currentUser = null;
       return next();
     }
     if (session.expires_at && new Date(session.expires_at).getTime() < Date.now()) {
       await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
-      clearSessionCookie(res, req);
+      clearSessionCookie(res);
       res.locals.currentUser = null;
       return next();
     }
@@ -255,8 +243,9 @@ async function hydrateUser(req, res, next) {
       avatar_url: session.avatar_url
     };
   } catch (error) {
+    console.error('Session hydration error:', error);
     res.locals.currentUser = null;
-    clearSessionCookie(res, req);
+    clearSessionCookie(res);
   }
   return next();
 }
@@ -516,7 +505,7 @@ app.post(
         [username, email, passwordHash]
       );
       const token = await createSession(rows[0].id);
-      setSessionCookie(res, req, token);
+      setSessionCookie(res, token);
       return res.redirect('/');
     } catch (error) {
       return res.render('pages/register', { error: 'Username or email already in use.' });
@@ -546,18 +535,18 @@ app.post(
       return res.render('pages/sign-in', { error: 'Invalid credentials.' });
     }
     const token = await createSession(user.id);
-    setSessionCookie(res, req, token);
+    setSessionCookie(res, token);
     return res.redirect('/');
   })
 );
 
 app.post('/auth/logout', asyncHandler(async (req, res) => {
-  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
+  const token = req.cookies[SESSION_COOKIE];
   if (token) {
     const tokenHash = hashSessionToken(token);
     await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
   }
-  clearSessionCookie(res, req);
+  clearSessionCookie(res);
   res.redirect('/');
 }));
 
@@ -1089,6 +1078,7 @@ app.use((error, req, res, next) => {
   if (res.headersSent) {
     return next(error);
   }
+  console.error('Server error:', error);
   const message =
     error.code === '42P01'
       ? 'The database is still warming up. Please retry in a moment.'
