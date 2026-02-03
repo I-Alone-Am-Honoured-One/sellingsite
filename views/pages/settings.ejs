@@ -15,7 +15,7 @@
   <% } %>
 
   <div class="settings-grid">
-    <form class="form-card" method="POST" action="/settings/profile" enctype="multipart/form-data">
+    <form class="form-card settings-card" method="POST" action="/settings/profile" enctype="multipart/form-data">
       <h3>Account profile</h3>
       <div class="profile-avatar">
         <% if (user.avatar_url) { %>
@@ -35,13 +35,15 @@
       </label>
       <label>
         Avatar image
-        <input type="file" name="avatar" accept="image/*" />
+        <input class="file-input" type="file" name="avatar" accept="image/*" />
         <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
       </label>
-      <button class="button primary" type="submit">Save profile</button>
+      <div class="settings-actions">
+        <button class="button primary" type="submit">Save profile</button>
+      </div>
     </form>
 
-    <form class="form-card" method="POST" action="/settings">
+    <form class="form-card settings-card" method="POST" action="/settings">
       <input type="hidden" name="action" value="password" />
       <h3>Change password</h3>
       <label>
@@ -56,20 +58,24 @@
         Confirm new password
         <input type="password" name="confirmPassword" required />
       </label>
-      <button class="button primary" type="submit">Update password</button>
+      <div class="settings-actions">
+        <button class="button primary" type="submit">Update password</button>
+      </div>
     </form>
 
-    <form class="form-card" method="POST" action="/settings">
+    <form class="form-card settings-card" method="POST" action="/settings">
       <input type="hidden" name="action" value="email" />
       <h3>Update email</h3>
       <label>
         Email address
         <input type="email" name="email" value="<%= user.email %>" required />
       </label>
-      <button class="button ghost" type="submit">Save email</button>
+      <div class="settings-actions">
+        <button class="button ghost" type="submit">Save email</button>
+      </div>
     </form>
 
-    <form class="form-card" method="POST" action="/settings">
+    <form class="form-card settings-card" method="POST" action="/settings">
       <input type="hidden" name="action" value="notifications" />
       <h3>Notifications</h3>
       <label class="checkbox">
@@ -80,14 +86,44 @@
         <input type="checkbox" name="marketing_enabled" <%= user.marketing_enabled ? 'checked' : '' %> />
         Send me marketplace news and promos.
       </label>
-      <button class="button ghost" type="submit">Save preferences</button>
+      <div class="settings-actions">
+        <button class="button ghost" type="submit">Save preferences</button>
+      </div>
     </form>
 
-    <div class="form-card">
+    <div class="form-card settings-card">
+      <h3>Your listings</h3>
+      <p class="muted">Edit listing details, pricing, and photos anytime.</p>
+      <% if (listings.length) { %>
+        <div class="settings-listings">
+          <% listings.forEach(listing => { %>
+            <div class="settings-listing">
+              <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+              <div>
+                <h4><%= listing.title %></h4>
+                <p class="muted"><%= formatPrice(listing.price_cents) %></p>
+              </div>
+              <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <p>You do not have any listings yet.</p>
+        </div>
+      <% } %>
+      <div class="settings-actions">
+        <a class="button primary" href="/listings/new">Create new listing</a>
+      </div>
+    </div>
+
+    <div class="form-card settings-card">
       <h3>Session management</h3>
       <p class="muted">Log out to end this session. More device controls coming soon.</p>
       <form method="POST" action="/auth/logout">
-        <button class="button primary" type="submit">Log out</button>
+        <div class="settings-actions">
+          <button class="button danger" type="submit">Log out</button>
+        </div>
       </form>
     </div>
   </div>
