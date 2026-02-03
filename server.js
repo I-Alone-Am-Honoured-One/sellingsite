@@ -231,6 +231,25 @@ async function getSettingsPayload(userId) {
   return { user: users[0], listings };
 }
 
+async function getProfilePayload(userId) {
+  const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [userId]);
+  const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
+  const { rows: listings } = await query(
+    'SELECT id, title, image_url, price_cents FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  const { rows: orderStats } = await query(
+    'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
+    [userId]
+  );
+  return {
+    user: users[0],
+    listings,
+    listingCount: Number(listingStats[0]?.count || 0),
+    orderCount: Number(orderStats[0]?.count || 0)
+  };
+}
+
 async function hydrateUser(req, res, next) {
   const token = req.cookies[SESSION_COOKIE];
   if (!token) {
@@ -554,6 +573,22 @@ app.post(
       [title, description, priceCents, category, condition, imageUrl, shippingDetails, listingId, userId]
     );
     return res.redirect(`/listings/${listingId}`);
+  })
+);
+
+app.post(
+  '/listings/:id/delete',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const listingId = req.params.id;
+    const userId = res.locals.currentUser.id;
+    const { rows } = await query('SELECT id FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+    const listing = rows[0];
+    if (!listing) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    await query('DELETE FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+    return res.redirect('/settings');
   })
 );
 
@@ -1149,19 +1184,12 @@ app.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const userId = res.locals.currentUser.id;
-    const { rows: users } = await query(
-      'SELECT id, username, email, avatar_url FROM users WHERE id = $1',
-      [userId]
-    );
-    const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-    const { rows: orderStats } = await query(
-      'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-      [userId]
-    );
+    const { user, listings, listingCount, orderCount } = await getProfilePayload(userId);
     res.render('pages/profile', {
-      user: users[0],
-      listingCount: Number(listingStats[0]?.count || 0),
-      orderCount: Number(orderStats[0]?.count || 0),
+      user,
+      listings,
+      listingCount,
+      orderCount,
       error: null,
       success: null
     });
@@ -1179,18 +1207,12 @@ app.post(
       const message =
         error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
       const userId = res.locals.currentUser.id;
-      const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [
-        userId
-      ]);
-      const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-      const { rows: orderStats } = await query(
-        'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-        [userId]
-      );
+      const { user, listings, listingCount, orderCount } = await getProfilePayload(userId);
       return res.render('pages/profile', {
-        user: users[0],
-        listingCount: Number(listingStats[0]?.count || 0),
-        orderCount: Number(orderStats[0]?.count || 0),
+        user,
+        listings,
+        listingCount,
+        orderCount,
         error: message,
         success: null
       });
@@ -1199,18 +1221,12 @@ app.post(
   asyncHandler(async (req, res) => {
     if (!req.file) {
       const userId = res.locals.currentUser.id;
-      const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [
-        userId
-      ]);
-      const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-      const { rows: orderStats } = await query(
-        'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-        [userId]
-      );
+      const { user, listings, listingCount, orderCount } = await getProfilePayload(userId);
       return res.render('pages/profile', {
-        user: users[0],
-        listingCount: Number(listingStats[0]?.count || 0),
-        orderCount: Number(orderStats[0]?.count || 0),
+        user,
+        listings,
+        listingCount,
+        orderCount,
         error: 'Please upload an avatar image.',
         success: null
       });
@@ -1220,23 +1236,20 @@ app.post(
       avatarUrl = await uploadImage(req.file);
     } catch (error) {
       const userId = res.locals.currentUser.id;
-      const { rows: users } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [
-        userId
-      ]);
-      const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-      const { rows: orderStats } = await query(
-        'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-        [userId]
-      );
+      const { user, listings, listingCount, orderCount } = await getProfilePayload(userId);
       return res.render('pages/profile', {
-        user: users[0],
-        listingCount: Number(listingStats[0]?.count || 0),
-        orderCount: Number(orderStats[0]?.count || 0),
+        user,
+        listings,
+        listingCount,
+        orderCount,
         error: 'Avatar upload failed. Please try again.',
         success: null
       });
     }
     await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, res.locals.currentUser.id]);
+    if (res.locals.currentUser) {
+      res.locals.currentUser.avatar_url = avatarUrl;
+    }
     res.redirect('/profile');
   })
 );
@@ -1305,6 +1318,12 @@ app.post(
           bio,
           res.locals.currentUser.id
         ]);
+      }
+      if (res.locals.currentUser) {
+        res.locals.currentUser.username = username;
+        if (avatarUrl) {
+          res.locals.currentUser.avatar_url = avatarUrl;
+        }
       }
       success = 'Profile updated successfully.';
     }
