@@ -516,25 +516,28 @@ app.post(
 );
 
 app.get('/auth/sign-in', (req, res) => {
-  res.render('pages/sign-in', { error: null, email: '' }); // No initial email
+  res.render('pages/sign-in', { error: null, login: '' });
 });
 
 app.post(
   '/auth/sign-in',
   asyncHandler(async (req, res) => {
-    const email = (req.body.email || '').trim().toLowerCase();
+    const login = (req.body.login || '').trim();
     const password = req.body.password;
-    if (!email || !password) {
-      return res.render('pages/sign-in', { error: 'Email and password required.', email }); // Preserve email
+    if (!login || !password) {
+      return res.render('pages/sign-in', { error: 'Email/username and password required.', login });
     }
-    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const loginLower = login.toLowerCase();
+    const { rows } = await query('SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1', [
+      loginLower
+    ]);
     const user = rows[0];
     if (!user) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.', email }); // Preserve email
+      return res.render('pages/sign-in', { error: 'Invalid credentials.', login });
     }
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.', email }); // Preserve email
+      return res.render('pages/sign-in', { error: 'Invalid credentials.', login });
     }
     const token = await createSession(user.id);
     setSessionCookie(res, token);
