@@ -18,6 +18,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
 const RESET_CODE_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_COOKIE = 'session';
+const SECURE_SESSION_COOKIE = 'session_secure';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
@@ -87,22 +89,28 @@ function isSecureRequest(req) {
   return req.secure || req.headers['x-forwarded-proto'] === 'https';
 }
 
-function getSessionCookieOptions(req) {
+function buildSessionCookieOptions({ sameSite, secure }) {
   return {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: isSecureRequest(req),
+    sameSite,
+    secure,
     maxAge: SESSION_MAX_AGE_MS,
     path: '/'
   };
 }
 
 function setSessionCookie(res, req, token) {
-  res.cookie('session', token, getSessionCookieOptions(req));
+  res.cookie(SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
+  if (isSecureRequest(req)) {
+    res.cookie(SECURE_SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
+  } else {
+    res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
+  }
 }
 
 function clearSessionCookie(res, req) {
-  res.clearCookie('session', getSessionCookieOptions(req));
+  res.clearCookie(SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
+  res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
 }
 
 function asyncHandler(handler) {
@@ -189,7 +197,7 @@ function handleUpload(uploadFn, onError) {
 }
 
 async function hydrateUser(req, res, next) {
-  const token = req.cookies.session;
+  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
   if (!token) {
     res.locals.currentUser = null;
     return next();
