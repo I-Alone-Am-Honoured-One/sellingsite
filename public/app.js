@@ -24,8 +24,12 @@ if (profileMenu) {
 
   trigger.addEventListener('click', (event) => {
     event.stopPropagation();
-    const isOpen = profileMenu.classList.toggle('is-open');
-    trigger.setAttribute('aria-expanded', String(isOpen));
+    if (profileMenu.classList.contains('is-open')) {
+      window.location.href = '/profile';
+      return;
+    }
+    profileMenu.classList.add('is-open');
+    trigger.setAttribute('aria-expanded', 'true');
   });
 
   document.addEventListener('click', (event) => {

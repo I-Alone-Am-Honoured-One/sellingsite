@@ -16,17 +16,21 @@
 
   <div class="profile-grid">
     <div class="profile-card">
-      <div class="profile-avatar">
-        <% if (user.avatar_url) { %>
-          <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
-        <% } else { %>
-          <span><%= user.username.slice(0, 1).toUpperCase() %></span>
-        <% } %>
+      <div class="profile-identity">
+        <div class="profile-avatar">
+          <% if (user.avatar_url) { %>
+            <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
+          <% } else { %>
+            <span><%= user.username.slice(0, 1).toUpperCase() %></span>
+          <% } %>
+        </div>
+        <div>
+          <h2><%= user.username %></h2>
+          <p class="muted"><%= user.email %></p>
+          <p class="meta">Joined <%= new Date(user.created_at).toLocaleDateString() %></p>
+        </div>
       </div>
-      <div>
-        <h2><%= user.username %></h2>
-        <p class="muted"><%= user.email %></p>
-      </div>
+      <p class="profile-bio"><%= user.bio || 'Add a short bio to help buyers get to know you.' %></p>
       <div class="stats-row">
         <div>
           <h3><%= listingCount %></h3>
@@ -45,11 +49,38 @@
       <form class="form-card" method="POST" action="/profile/avatar" enctype="multipart/form-data">
         <label>
           Avatar image
-          <input type="file" name="avatar" accept="image/*" required />
+          <input class="file-input" type="file" name="avatar" accept="image/*" required />
           <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
         </label>
         <button class="button primary" type="submit">Upload avatar</button>
       </form>
+    </div>
+
+    <div class="profile-card">
+      <h3>Your listings</h3>
+      <p class="muted">Keep your listings up to date and ready for buyers.</p>
+      <% if (listings.length) { %>
+        <div class="profile-listings">
+          <% listings.forEach(listing => { %>
+            <div class="settings-listing">
+              <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+              <div>
+                <h4><%= listing.title %></h4>
+                <p class="muted"><%= formatPrice(listing.price_cents) %></p>
+                <p class="meta">Listed <%= new Date(listing.created_at).toLocaleDateString() %></p>
+              </div>
+              <a class="button ghost small" href="/listings/<%= listing.id %>/edit">Edit</a>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <p>You do not have any listings yet.</p>
+        </div>
+      <% } %>
+      <div class="settings-actions">
+        <a class="button primary" href="/listings/new">Create new listing</a>
+      </div>
     </div>
   </div>
 </section>

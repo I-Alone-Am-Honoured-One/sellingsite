@@ -1178,12 +1178,13 @@ app.get(
   '/profile',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const userId = res.locals.currentUser.id;
-    const { user, listingCount, orderCount } = await getProfilePayload(userId);
+    const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
     res.render('pages/profile', {
       user,
       listingCount,
       orderCount,
+      listings,
+      formatPrice,
       error: null,
       success: null
     });
@@ -1200,12 +1201,13 @@ app.post(
       }
       const message =
         error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
-      const userId = res.locals.currentUser.id;
-      const { user, listingCount, orderCount } = await getProfilePayload(userId);
+      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
       return res.render('pages/profile', {
         user,
         listingCount,
         orderCount,
+        listings,
+        formatPrice,
         error: message,
         success: null
       });
@@ -1213,12 +1215,13 @@ app.post(
   },
   asyncHandler(async (req, res) => {
     if (!req.file) {
-      const userId = res.locals.currentUser.id;
-      const { user, listingCount, orderCount } = await getProfilePayload(userId);
+      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
       return res.render('pages/profile', {
         user,
         listingCount,
         orderCount,
+        listings,
+        formatPrice,
         error: 'Please upload an avatar image.',
         success: null
       });
@@ -1227,12 +1230,13 @@ app.post(
     try {
       avatarUrl = await uploadImage(req.file);
     } catch (error) {
-      const userId = res.locals.currentUser.id;
-      const { user, listingCount, orderCount } = await getProfilePayload(userId);
+      const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
       return res.render('pages/profile', {
         user,
         listingCount,
         orderCount,
+        listings,
+        formatPrice,
         error: 'Avatar upload failed. Please try again.',
         success: null
       });
