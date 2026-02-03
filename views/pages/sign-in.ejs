@@ -12,11 +12,11 @@
   <form class="form-card" method="POST" action="/auth/sign-in">
     <label>
       Email
-      <input type="email" name="email" required />
+      <input type="email" name="email" value="<%= email || '' %>" required /> <!-- Preserve email on error -->
     </label>
     <label>
       Password
-      <input type="password" name="password" required />
+      <input type="password" name="password" required /> <!-- Password not preserved for security -->
     </label>
     <button class="button primary" type="submit">Sign in</button>
   </form>
