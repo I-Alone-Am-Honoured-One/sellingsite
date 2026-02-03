@@ -1237,6 +1237,9 @@ app.post(
       });
     }
     await query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, res.locals.currentUser.id]);
+    if (res.locals.currentUser) {
+      res.locals.currentUser.avatar_url = avatarUrl;
+    }
     res.redirect('/profile');
   })
 );
@@ -1305,6 +1308,12 @@ app.post(
           bio,
           res.locals.currentUser.id
         ]);
+      }
+      if (res.locals.currentUser) {
+        res.locals.currentUser.username = username;
+        if (avatarUrl) {
+          res.locals.currentUser.avatar_url = avatarUrl;
+        }
       }
       success = 'Profile updated successfully.';
     }
