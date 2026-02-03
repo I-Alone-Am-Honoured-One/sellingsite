@@ -1,0 +1,69 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Edit listing</h1>
+      <p class="muted">Update your listing details and keep your buyers informed.</p>
+    </div>
+  </div>
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+  <form class="form-card" method="POST" action="/listings/<%= listing.id %>/edit" enctype="multipart/form-data">
+    <label>
+      Title
+      <input type="text" name="title" value="<%= form?.title || listing.title %>" required />
+    </label>
+    <label>
+      Description
+      <textarea name="description" rows="4" required><%= form?.description || listing.description %></textarea>
+    </label>
+    <div class="form-row">
+      <label>
+        Price (USD)
+        <input type="number" name="price" step="0.01" min="1" value="<%= form?.price || (listing.price_cents / 100).toFixed(2) %>" required />
+      </label>
+      <label>
+        Category
+        <select name="category" required>
+          <option value="">Select a category</option>
+          <% categories.forEach(category => { %>
+            <option value="<%= category %>" <%= (form?.category || listing.category) === category ? 'selected' : '' %>>
+              <%= category %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>
+        Condition
+        <select name="condition" required>
+          <option value="">Select condition</option>
+          <% conditions.forEach(condition => { %>
+            <option value="<%= condition %>" <%= (form?.condition || listing.condition) === condition ? 'selected' : '' %>>
+              <%= condition %>
+            </option>
+          <% }) %>
+        </select>
+      </label>
+      <label>
+        Listing image
+        <input type="file" name="image" accept="image/*" />
+        <span class="helper">Leave blank to keep the current photo.</span>
+      </label>
+    </div>
+    <div class="listing-image-preview">
+      <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+    </div>
+    <label>
+      Shipping Details
+      <textarea name="shippingDetails" rows="3" required><%= form?.shippingDetails || listing.shipping_details %></textarea>
+    </label>
+    <div class="form-actions">
+      <button class="button primary" type="submit">Save changes</button>
+      <a class="button ghost" href="/listings/<%= listing.id %>">Cancel</a>
+    </div>
+  </form>
+</section>
+<%- include('../partials/footer') %>

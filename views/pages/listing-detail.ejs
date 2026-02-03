@@ -25,6 +25,7 @@
         <% if (currentUser) { %>
           <% if (currentUser.id === listing.seller_id) { %>
             <div class="notice">You can’t purchase your own listing.</div>
+            <a class="button ghost" href="/listings/<%= listing.id %>/edit">Edit listing</a>
           <% } else { %>
             <form method="POST" action="/listings/<%= listing.id %>/buy">
               <button class="button primary" type="submit">Buy now</button>

@@ -333,6 +333,22 @@ img {
   box-shadow: 0 0 15px var(--primary-glow);
 }
 
+.button.danger {
+  background: linear-gradient(135deg, #ff4d5b 0%, #d8242f 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 77, 91, 0.35);
+}
+
+.button.danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 77, 91, 0.45);
+}
+
+.button.small {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+}
+
 .link-button {
   background: none;
   border: none;
@@ -1389,6 +1405,65 @@ img {
   gap: 2rem;
 }
 
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.settings-listings {
+  display: grid;
+  gap: 1rem;
+}
+
+.settings-listing {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+}
+
+.settings-listing img {
+  width: 56px;
+  height: 56px;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+.settings-listing h4 {
+  margin-bottom: 0.25rem;
+}
+
+.listing-image-preview {
+  display: grid;
+  justify-items: start;
+}
+
+.listing-image-preview img {
+  width: min(320px, 100%);
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
 .checkbox {
   display: flex;
   gap: 0.75rem;
@@ -1598,6 +1673,11 @@ img {
   .settings-grid,
   .profile-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settings-listing {
+    grid-template-columns: 1fr;
+    justify-items: start;
   }
 
   .card img {

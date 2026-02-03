@@ -214,9 +214,21 @@ function handleUpload(uploadFn, onError) {
       }
       const message =
         error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
-      return onError(req, res, message);
+      return onError(req, res, message, next);
     });
   };
+}
+
+async function getSettingsPayload(userId) {
+  const { rows: users } = await query(
+    'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
+    [userId]
+  );
+  const { rows: listings } = await query(
+    'SELECT id, title, image_url, price_cents FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
+  return { user: users[0], listings };
 }
 
 async function hydrateUser(req, res, next) {
@@ -412,6 +424,136 @@ app.post(
       [res.locals.currentUser.id, title, description, priceCents, category, condition, imageUrl, shippingDetails]
     );
     return res.redirect('/marketplace');
+  })
+);
+
+app.get(
+  '/listings/:id/edit',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const listingId = req.params.id;
+    const userId = res.locals.currentUser.id;
+    const { rows } = await query('SELECT * FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+    const listing = rows[0];
+    if (!listing) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    res.render('pages/edit-listing', {
+      error: null,
+      listing,
+      categories: CATEGORIES,
+      conditions: CONDITIONS,
+      form: {
+        title: listing.title,
+        description: listing.description,
+        price: (listing.price_cents / 100).toFixed(2),
+        category: listing.category,
+        condition: listing.condition,
+        shippingDetails: listing.shipping_details
+      }
+    });
+  })
+);
+
+app.post(
+  '/listings/:id/edit',
+  requireAuth,
+  handleUpload(uploadListingImage, async (req, res, message, next) => {
+    try {
+      const listingId = req.params.id;
+      const userId = res.locals.currentUser.id;
+      const { rows } = await query('SELECT * FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+      const listing = rows[0];
+      if (!listing) {
+        return res.status(404).render('pages/error', { message: 'Listing not found.' });
+      }
+      return res.render('pages/edit-listing', {
+        error: message,
+        listing,
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }),
+  asyncHandler(async (req, res) => {
+    const listingId = req.params.id;
+    const userId = res.locals.currentUser.id;
+    const { rows } = await query('SELECT * FROM listings WHERE id = $1 AND seller_id = $2', [listingId, userId]);
+    const listing = rows[0];
+    if (!listing) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+
+    const { title, description, price, category, condition, shippingDetails } = req.body;
+    if (!title || !description || !price || !category || !condition || !shippingDetails) {
+      return res.render('pages/edit-listing', {
+        error: 'All fields are required.',
+        listing,
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    }
+    if (!CATEGORIES.includes(category)) {
+      return res.render('pages/edit-listing', {
+        error: 'Please select a valid category.',
+        listing,
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    }
+    if (!CONDITIONS.includes(condition)) {
+      return res.render('pages/edit-listing', {
+        error: 'Please select a valid condition.',
+        listing,
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    }
+    const priceCents = Math.round(Number(price) * 100);
+    if (Number.isNaN(priceCents) || priceCents <= 0) {
+      return res.render('pages/edit-listing', {
+        error: 'Price must be a positive number.',
+        listing,
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    }
+
+    let imageUrl = listing.image_url;
+    if (req.file) {
+      try {
+        imageUrl = await uploadImage(req.file);
+      } catch (error) {
+        return res.render('pages/edit-listing', {
+          error: 'Image upload failed. Please try again.',
+          listing,
+          categories: CATEGORIES,
+          conditions: CONDITIONS,
+          form: req.body
+        });
+      }
+    }
+
+    await query(
+      `UPDATE listings
+       SET title = $1,
+           description = $2,
+           price_cents = $3,
+           category = $4,
+           condition = $5,
+           image_url = $6,
+           shipping_details = $7
+       WHERE id = $8 AND seller_id = $9`,
+      [title, description, priceCents, category, condition, imageUrl, shippingDetails, listingId, userId]
+    );
+    return res.redirect(`/listings/${listingId}`);
   })
 );
 
@@ -1103,11 +1245,8 @@ app.get(
   '/settings',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { rows } = await query(
-      'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
-      [res.locals.currentUser.id]
-    );
-    res.render('pages/settings', { user: rows[0], error: null, success: null });
+    const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
+    res.render('pages/settings', { user, listings, formatPrice, error: null, success: null });
   })
 );
 
@@ -1121,11 +1260,8 @@ app.post(
       }
       const message =
         error.code === 'LIMIT_FILE_SIZE' ? 'Image must be smaller than 5MB.' : error.message || 'Upload failed.';
-      const { rows } = await query(
-        'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
-        [res.locals.currentUser.id]
-      );
-      return res.render('pages/settings', { user: rows[0], error: message, success: null });
+      const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
+      return res.render('pages/settings', { user, listings, formatPrice, error: message, success: null });
     });
   },
   asyncHandler(async (req, res) => {
@@ -1173,11 +1309,8 @@ app.post(
       success = 'Profile updated successfully.';
     }
 
-    const { rows } = await query(
-      'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
-      [res.locals.currentUser.id]
-    );
-    res.render('pages/settings', { user: rows[0], error, success });
+    const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
+    res.render('pages/settings', { user, listings, formatPrice, error, success });
   })
 );
 
@@ -1237,11 +1370,8 @@ app.post(
       success = 'Notification preferences saved.';
     }
 
-    const { rows } = await query(
-      'SELECT username, email, avatar_url, bio, notification_enabled, marketing_enabled FROM users WHERE id = $1',
-      [res.locals.currentUser.id]
-    );
-    res.render('pages/settings', { user: rows[0], error, success });
+    const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
+    res.render('pages/settings', { user, listings, formatPrice, error, success });
   })
 );
 
