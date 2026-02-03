@@ -231,28 +231,6 @@ async function getSettingsPayload(userId) {
   return { user: users[0], listings };
 }
 
-async function getProfilePayload(userId) {
-  const { rows: users } = await query(
-    'SELECT id, username, email, avatar_url, bio, created_at FROM users WHERE id = $1',
-    [userId]
-  );
-  const { rows: listingStats } = await query('SELECT COUNT(*) FROM listings WHERE seller_id = $1', [userId]);
-  const { rows: orderStats } = await query(
-    'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
-    [userId]
-  );
-  const { rows: listings } = await query(
-    'SELECT id, title, image_url, price_cents, created_at FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
-    [userId]
-  );
-  return {
-    user: users[0],
-    listingCount: Number(listingStats[0]?.count || 0),
-    orderCount: Number(orderStats[0]?.count || 0),
-    listings
-  };
-}
-
 async function hydrateUser(req, res, next) {
   const token = req.cookies[SESSION_COOKIE];
   if (!token) {
