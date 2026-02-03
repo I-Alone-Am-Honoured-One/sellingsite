@@ -154,20 +154,35 @@ function getResetCodeExpiry() {
   return new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
 }
 
+function envTrim(key) {
+  const v = process.env[key];
+  return typeof v === 'string' ? v.trim() : v;
+}
+
 function createMailer() {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    return null;
-  }
+  const host = envTrim('SMTP_HOST');
+  const user = envTrim('SMTP_USER');
+  const pass = envTrim('SMTP_PASS');
+  const port = Number(envTrim('SMTP_PORT') || 465);
+
+  if (!host || !user || !pass) return null;
+
+  const secure =
+    envTrim('SMTP_SECURE') ? envTrim('SMTP_SECURE') === 'true' : port === 465;
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT || 587) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+
+    // prevents “loading forever” if SMTP can’t connect
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000
   });
 }
+
 
 async function sendResetEmail({ email, code }) {
   const transporter = createMailer();
@@ -771,47 +786,6 @@ app.get('/auth/sign-in', (req, res) => {
     form: {}
   });
 });
-
-app.post(
-  '/auth/sign-in',
-  asyncHandler(async (req, res) => {
-    const login = (req.body.login || '').trim();
-    const password = req.body.password;
-
-    const renderLogin = (message) =>
-      res.render('pages/auth', {
-        activePanel: 'login',
-        loginError: message,
-        registerError: null,
-        login,
-        form: {}
-      });
-
-    if (!login || !password) {
-      return renderLogin('Email/username and password required.');
-    }
-
-    const loginLower = login.toLowerCase();
-    const { rows } = await query(
-      'SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1',
-      [loginLower]
-    );
-
-    const user = rows[0];
-    if (!user) {
-      return renderLogin('Invalid credentials.');
-    }
-
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) {
-      return renderLogin('Invalid credentials.');
-    }
-
-    const token = await createSession(user.id);
-    setSessionCookie(res, token);
-    return res.redirect('/');
-  })
-);
 
 app.post('/auth/logout', asyncHandler(async (req, res) => {
   const token = req.cookies[SESSION_COOKIE];
