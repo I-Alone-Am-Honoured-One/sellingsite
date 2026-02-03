@@ -14,7 +14,7 @@ const { query } = require('./db');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const EMAIL_FROM = process.env.EMAIL_FROM;
+const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
 const COOKIE_SECRET = process.env.COOKIE_SECRET || 'dev-cookie-secret-change-me';
 const RESET_CODE_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -154,35 +154,25 @@ function getResetCodeExpiry() {
   return new Date(Date.now() + RESET_CODE_TTL_MINUTES * 60 * 1000);
 }
 
-function envTrim(key) {
-  const v = process.env[key];
-  return typeof v === 'string' ? v.trim() : v;
-}
-
 function createMailer() {
-  const host = envTrim('SMTP_HOST');
-  const user = envTrim('SMTP_USER');
-  const pass = envTrim('SMTP_PASS');
-  const port = Number(envTrim('SMTP_PORT') || 465);
-
-  if (!host || !user || !pass) return null;
-
-  const secure =
-    envTrim('SMTP_SECURE') ? envTrim('SMTP_SECURE') === 'true' : port === 465;
-
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    return null;
+  }
   return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-
-    // prevents “loading forever” if SMTP can’t connect
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 20_000
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    // Prevent requests like "Forgot password" from hanging for a long time
+    // if the SMTP provider is unreachable.
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
   });
 }
-
 
 async function sendResetEmail({ email, code }) {
   const transporter = createMailer();
@@ -253,10 +243,17 @@ async function getProfilePayload(userId) {
     'SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR seller_id = $1',
     [userId]
   );
+  // Used by views/pages/profile.ejs to render "Your listings".
+  // Always return an array so the template can safely do `listings.length`.
+  const { rows: listings } = await query(
+    'SELECT id, title, image_url, price_cents FROM listings WHERE seller_id = $1 ORDER BY created_at DESC',
+    [userId]
+  );
   return {
     user: users[0],
     listingCount: Number(listingStats[0]?.count || 0),
-    orderCount: Number(orderStats[0]?.count || 0)
+    orderCount: Number(orderStats[0]?.count || 0),
+    listings
   };
 }
 
@@ -776,17 +773,6 @@ app.post(
   })
 );
 
-
-app.get('/auth/sign-in', (req, res) => {
-  res.render('pages/auth', {
-    activePanel: 'login',
-    loginError: null,
-    registerError: null,
-    login: '',
-    form: {}
-  });
-});
-
 app.post('/auth/logout', asyncHandler(async (req, res) => {
   const token = req.cookies[SESSION_COOKIE];
   if (token) {
@@ -821,7 +807,13 @@ app.post(
          VALUES ($1, $2, $3)`,
         [user.id, codeHash, getResetCodeExpiry()]
       );
-      await sendResetEmail({ email: user.email, code });
+      try {
+        await sendResetEmail({ email: user.email, code });
+      } catch (mailError) {
+        // Don't take down the whole request if SMTP is misconfigured/unreachable.
+        // Log so you can see what's wrong in Render logs.
+        console.error('Password reset email failed:', mailError);
+      }
     }
     return res.render('pages/forgot-password', {
       error: null,
