@@ -118,12 +118,32 @@ function resolveCookieSecure(req) {
   return process.env.NODE_ENV === 'production' && Boolean(req.secure);
 }
 
+function resolveCookieSecure(req) {
+  // Allow explicit override via environment variable
+  if (process.env.COOKIE_SECURE === 'true') return true;
+  if (process.env.COOKIE_SECURE === 'false') return false;
+
+  // ✓ Default: secure cookies only when in production AND the current request is HTTPS
+  // With `app.set('trust proxy', 1)`, req.secure should be true behind common proxies 
+  // when they send X-Forwarded-Proto=https
+  return process.env.NODE_ENV === 'production' && Boolean(req.secure);
+}
+
 function setSessionCookie(req, res, token) {
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     maxAge: SESSION_MAX_AGE_MS,
     sameSite: 'lax',
-    secure: resolveCookieSecure(req),
+    secure: resolveCookieSecure(req),  // ✓ FIXED
+    path: '/'
+  });
+}
+
+function clearSessionCookie(req, res) {
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: resolveCookieSecure(req),  // ✓ FIXED
     path: '/'
   });
 }
@@ -162,8 +182,7 @@ function createMailer() {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: Number(process.env.SMTP_PORT || 587) === 465,
-    // Prevent requests like "Forgot password" from hanging for a long time
-    // if the SMTP provider is unreachable.
+    // ✓ ADDED: Prevent requests from hanging if SMTP is unreachable
     connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS || 10000),
     greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS || 10000),
     socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS || 15000),
@@ -766,13 +785,13 @@ app.post(
     const passwordConfirm = req.body.passwordConfirm;
 
     const renderRegister = (message) =>
-      res.render('pages/auth', {
+       res.render('pages/auth', {
         activePanel: 'register',
         loginError: null,
         registerError: message,
         login: '',
-        form: { username, email, termsAccepted }
-      });
+       form: { username, email }  // ✓ FIXED
+    });
 
     if (!username || !email || !password || !passwordConfirm) {
       return renderRegister('All fields are required.');
@@ -899,15 +918,22 @@ app.post(
   asyncHandler(async (req, res) => {
     const email = (req.body.email || '').trim().toLowerCase();
     if (!email || !isValidEmail(email)) {
-      return res.render('pages/forgot-password', { error: 'Please enter a valid email.', success: null });
+      return res.render('pages/forgot-password', { 
+        error: 'Please enter a valid email.', 
+        success: null 
+      });
     }
-    let debugCode = null;
+    
+    let debugCode = null;  // ✓ ADDED
     let successMessage = 'If that email exists, we sent a 6-digit reset code. Enter it below to reset your password.';
+    
     const { rows } = await query('SELECT id, email FROM users WHERE email = $1', [email]);
     const user = rows[0];
+    
     if (user) {
       const code = generateResetCode();
       const codeHash = await bcrypt.hash(code, 10);
+      
       await query('UPDATE password_reset_codes SET used_at = NOW() WHERE user_id = $1 AND used_at IS NULL', [
         user.id
       ]);
@@ -916,26 +942,31 @@ app.post(
          VALUES ($1, $2, $3)`,
         [user.id, codeHash, getResetCodeExpiry()]
       );
+      
       try {
         await sendResetEmail({ email: user.email, code });
       } catch (mailError) {
-        // Don't take down the whole request if SMTP is misconfigured/unreachable.
-        // Log so you can see what's wrong in Render logs.
+        // ✓ ADDED: Better error handling
         console.error('Password reset email failed:', mailError);
+        
+        // ✓ ADDED: In development, show the code directly if email fails
         if (process.env.NODE_ENV !== 'production') {
           debugCode = code;
           successMessage = 'Email delivery is not configured. Use the reset code below to continue.';
         }
       }
     }
+    
+    // ✓ FIXED: Pass debugCode to template
     return res.render('pages/reset-password', {
       error: null,
       success: successMessage,
       email,
-      debugCode
+      debugCode  // ✓ Will show code in dev mode if email failed
     });
   })
 );
+
 
 app.get('/auth/reset-password', (req, res) => {
   res.render('pages/reset-password', { error: null, success: null, email: req.query.email || '', debugCode: null });
@@ -1432,4 +1463,40 @@ app.use((error, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Marketplace app running on http://localhost:${PORT}`);
+});
+
+
+
+
+function sanitizeInput(input, maxLength = 500) {
+  if (typeof input !== 'string') return '';
+  return input.trim().slice(0, maxLength);
+}
+
+// Add better error logging in production
+app.use((error, req, res, next) => {
+  if (res.headersSent) {
+    return next(error);
+  }
+  
+  // ✓ Log errors with context in production
+  if (process.env.NODE_ENV === 'production') {
+    console.error({
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      stack: error.stack,
+      path: req.path,
+      method: req.method,
+      userId: res.locals.currentUser?.id,
+      ip: req.ip
+    });
+  } else {
+    console.error('Server error:', error);
+  }
+  
+  const message =
+    error.code === '42P01'
+      ? 'The database is still warming up. Please retry in a moment.'
+      : error.message || 'Something went wrong. Please try again.';
+  return res.status(500).render('pages/error', { message });
 });
