@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
@@ -14,17 +14,11 @@ const { query } = require('./db');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'mariusjon000@gmail.com';
 const RESET_CODE_TTL_MINUTES = 15;
-const isProduction = process.env.NODE_ENV === 'production';
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: isProduction,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-  path: '/'
-};
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_COOKIE = 'session';
+const SECURE_SESSION_COOKIE = 'session_secure';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
@@ -80,14 +74,67 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+ensureSessionsTable().catch((error) => {
+  console.error('Failed to ensure sessions table exists:', error);
+});
+
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function createToken(user) {
-  return jwt.sign({ id: user.id, username: user.username, email: user.email }, JWT_SECRET, {
-    expiresIn: '7d'
-  });
+async function ensureSessionsTable() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+  );
+}
+
+function hashSessionToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function createSession(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashSessionToken(token);
+  await query(
+    `INSERT INTO sessions (user_id, token_hash, expires_at)
+     VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
+    [userId, tokenHash]
+  );
+  return token;
+}
+
+function isSecureRequest(req) {
+  return req.secure || req.headers['x-forwarded-proto'] === 'https';
+}
+
+function buildSessionCookieOptions({ sameSite, secure }) {
+  return {
+    httpOnly: true,
+    sameSite,
+    secure,
+    maxAge: SESSION_MAX_AGE_MS,
+    path: '/'
+  };
+}
+
+function setSessionCookie(res, req, token) {
+  res.cookie(SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
+  if (isSecureRequest(req)) {
+    res.cookie(SECURE_SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
+  } else {
+    res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
+  }
+}
+
+function clearSessionCookie(res, req) {
+  res.clearCookie(SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
+  res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
 }
 
 function asyncHandler(handler) {
@@ -174,18 +221,42 @@ function handleUpload(uploadFn, onError) {
 }
 
 async function hydrateUser(req, res, next) {
-  const token = req.cookies.session;
+  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
   if (!token) {
     res.locals.currentUser = null;
     return next();
   }
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    const { rows } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [payload.id]);
-    res.locals.currentUser = rows[0] || null;
+    const tokenHash = hashSessionToken(token);
+    const { rows } = await query(
+      `SELECT users.id, users.username, users.email, users.avatar_url, sessions.expires_at
+       FROM sessions
+       JOIN users ON sessions.user_id = users.id
+       WHERE sessions.token_hash = $1
+       LIMIT 1`,
+      [tokenHash]
+    );
+    const session = rows[0];
+    if (!session) {
+      clearSessionCookie(res, req);
+      res.locals.currentUser = null;
+      return next();
+    }
+    if (session.expires_at && new Date(session.expires_at).getTime() < Date.now()) {
+      await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
+      clearSessionCookie(res, req);
+      res.locals.currentUser = null;
+      return next();
+    }
+    res.locals.currentUser = {
+      id: session.id,
+      username: session.username,
+      email: session.email,
+      avatar_url: session.avatar_url
+    };
   } catch (error) {
     res.locals.currentUser = null;
-    res.clearCookie('session', COOKIE_OPTIONS);
+    clearSessionCookie(res, req);
   }
   return next();
 }
@@ -444,8 +515,8 @@ app.post(
         'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
         [username, email, passwordHash]
       );
-      const token = createToken(rows[0]);
-      res.cookie('session', token, COOKIE_OPTIONS);
+      const token = await createSession(rows[0].id);
+      setSessionCookie(res, req, token);
       return res.redirect('/');
     } catch (error) {
       return res.render('pages/register', { error: 'Username or email already in use.' });
@@ -474,14 +545,19 @@ app.post(
     if (!isValid) {
       return res.render('pages/sign-in', { error: 'Invalid credentials.' });
     }
-    const token = createToken(user);
-    res.cookie('session', token, COOKIE_OPTIONS);
+    const token = await createSession(user.id);
+    setSessionCookie(res, req, token);
     return res.redirect('/');
   })
 );
 
 app.post('/auth/logout', (req, res) => {
-  res.clearCookie('session', COOKIE_OPTIONS);
+  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
+  if (token) {
+    const tokenHash = hashSessionToken(token);
+    query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]).catch(() => {});
+  }
+  clearSessionCookie(res, req);
   res.redirect('/');
 });
 
