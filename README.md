@@ -1,7 +1,7 @@
-# NeonSwap Marketplace
+# Sellar Marketplace
 
 ## Product pitch
-NeonSwap is a gamer-first marketplace with escrow-style protection. Buyers pay through the platform, sellers ship quickly, and buyers have a 24‑hour confirmation window after delivery to confirm or dispute the order—automatic release happens after the window closes.
+Sellar is a gamer-first marketplace with escrow-style protection. Buyers pay through the platform, sellers ship quickly, and buyers have a 24‑hour confirmation window after delivery to confirm or dispute the order—automatic release happens after the window closes.
 
 ## Feature list
 ### MVP (implemented)
