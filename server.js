@@ -19,7 +19,6 @@ const COOKIE_SECRET = process.env.COOKIE_SECRET || 'dev-cookie-secret-change-me'
 const RESET_CODE_TTL_MINUTES = 15;
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE = 'session';
-const SECURE_SESSION_COOKIE = 'session_secure';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
@@ -75,68 +74,58 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+ensureSessionsTable().catch((error) => {
+  console.error('Failed to ensure sessions table exists:', error);
+});
+
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function createSessionToken(userId) {
-  const payload = String(userId);
-  const signature = crypto.createHmac('sha256', COOKIE_SECRET).update(payload).digest('hex');
-  return `${payload}.${signature}`;
+async function ensureSessionsTable() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS sessions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+  );
 }
 
-function verifySessionToken(token) {
-  if (!token) {
-    return null;
-  }
-  const [payload, signature] = token.split('.');
-  if (!payload || !signature) {
-    return null;
-  }
-  const expected = crypto.createHmac('sha256', COOKIE_SECRET).update(payload).digest('hex');
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-    return null;
-  }
-  const userId = Number(payload);
-  if (!Number.isInteger(userId)) {
-    return null;
-  }
-  return userId;
+function hashSessionToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function createToken(user) {
-  if (!user || !user.id) {
-    throw new Error('User is required to create a session token.');
-  }
-  return createSessionToken(user.id);
+async function createSession(userId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = hashSessionToken(token);
+  await query(
+    `INSERT INTO sessions (user_id, token_hash, expires_at)
+     VALUES ($1, $2, NOW() + INTERVAL '7 days')`,
+    [userId, tokenHash]
+  );
+  return token;
 }
 
-function isSecureRequest(req) {
-  return req.secure || req.headers['x-forwarded-proto'] === 'https';
-}
-
-function buildSessionCookieOptions({ sameSite, secure }) {
-  return {
+function setSessionCookie(res, token) {
+  res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
-    sameSite,
-    secure,
     maxAge: SESSION_MAX_AGE_MS,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production for HTTPS
     path: '/'
-  };
+  });
 }
 
-function setSessionCookie(res, req, token) {
-  res.cookie(SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
-  if (isSecureRequest(req)) {
-    res.cookie(SECURE_SESSION_COOKIE, token, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-  } else {
-    res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
-  }
-}
-
-function clearSessionCookie(res, req) {
-  res.clearCookie(SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'lax', secure: false }));
-  res.clearCookie(SECURE_SESSION_COOKIE, buildSessionCookieOptions({ sameSite: 'none', secure: true }));
+function clearSessionCookie(res) {
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production', // Match secure flag to ensure cookie is cleared
+    path: '/'
+  });
 }
 
 function asyncHandler(handler) {
@@ -223,29 +212,43 @@ function handleUpload(uploadFn, onError) {
 }
 
 async function hydrateUser(req, res, next) {
-  const token = req.cookies[SECURE_SESSION_COOKIE] || req.cookies[SESSION_COOKIE];
+  const token = req.cookies[SESSION_COOKIE];
   if (!token) {
     res.locals.currentUser = null;
     return next();
   }
   try {
-    const userId = verifySessionToken(token);
-    if (!userId) {
-      clearSessionCookie(res, req);
+    const tokenHash = hashSessionToken(token);
+    const { rows } = await query(
+      `SELECT users.id, users.username, users.email, users.avatar_url, sessions.expires_at
+       FROM sessions
+       JOIN users ON sessions.user_id = users.id
+       WHERE sessions.token_hash = $1
+       LIMIT 1`,
+      [tokenHash]
+    );
+    const session = rows[0];
+    if (!session) {
+      clearSessionCookie(res);
       res.locals.currentUser = null;
       return next();
     }
-    const { rows } = await query('SELECT id, username, email, avatar_url FROM users WHERE id = $1', [userId]);
-    const user = rows[0];
-    if (!user) {
-      clearSessionCookie(res, req);
+    if (session.expires_at && new Date(session.expires_at).getTime() < Date.now()) {
+      await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
+      clearSessionCookie(res);
       res.locals.currentUser = null;
       return next();
     }
-    res.locals.currentUser = user;
+    res.locals.currentUser = {
+      id: session.id,
+      username: session.username,
+      email: session.email,
+      avatar_url: session.avatar_url
+    };
   } catch (error) {
+    console.error('Session hydration error:', error);
     res.locals.currentUser = null;
-    clearSessionCookie(res, req);
+    clearSessionCookie(res);
   }
   return next();
 }
@@ -480,7 +483,7 @@ app.post(
 );
 
 app.get('/auth/register', (req, res) => {
-  res.render('pages/register', { error: null });
+  res.render('pages/register', { error: null, form: {} }); // Provide empty form data for initial load
 });
 
 app.post(
@@ -490,13 +493,13 @@ app.post(
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password;
     if (!username || !email || !password) {
-      return res.render('pages/register', { error: 'All fields are required.' });
+      return res.render('pages/register', { error: 'All fields are required.', form: { username, email } }); // Preserve input values
     }
     if (!isValidEmail(email)) {
-      return res.render('pages/register', { error: 'Please enter a valid email.' });
+      return res.render('pages/register', { error: 'Please enter a valid email.', form: { username, email } }); // Preserve input values
     }
     if (password.length < 8) {
-      return res.render('pages/register', { error: 'Password must be at least 8 characters.' });
+      return res.render('pages/register', { error: 'Password must be at least 8 characters.', form: { username, email } }); // Preserve input values
     }
     const passwordHash = await bcrypt.hash(password, 10);
     try {
@@ -504,46 +507,54 @@ app.post(
         'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
         [username, email, passwordHash]
       );
-      const token = createToken(rows[0]);
-      setSessionCookie(res, req, token);
+      const token = await createSession(rows[0].id);
+      setSessionCookie(res, token);
       return res.redirect('/');
     } catch (error) {
-      return res.render('pages/register', { error: 'Username or email already in use.' });
+      return res.render('pages/register', { error: 'Username or email already in use.', form: { username, email } }); // Preserve input values
     }
   })
 );
 
 app.get('/auth/sign-in', (req, res) => {
-  res.render('pages/sign-in', { error: null });
+  res.render('pages/sign-in', { error: null, login: '' });
 });
 
 app.post(
   '/auth/sign-in',
   asyncHandler(async (req, res) => {
-    const email = (req.body.email || '').trim().toLowerCase();
+    const login = (req.body.login || '').trim();
     const password = req.body.password;
-    if (!email || !password) {
-      return res.render('pages/sign-in', { error: 'Email and password required.' });
+    if (!login || !password) {
+      return res.render('pages/sign-in', { error: 'Email/username and password required.', login });
     }
-    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const loginLower = login.toLowerCase();
+    const { rows } = await query('SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1', [
+      loginLower
+    ]);
     const user = rows[0];
     if (!user) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.' });
+      return res.render('pages/sign-in', { error: 'Invalid credentials.', login });
     }
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.' });
+      return res.render('pages/sign-in', { error: 'Invalid credentials.', login });
     }
-    const token = createToken(user);
-    setSessionCookie(res, req, token);
+    const token = await createSession(user.id);
+    setSessionCookie(res, token);
     return res.redirect('/');
   })
 );
 
-app.post('/auth/logout', (req, res) => {
-  clearSessionCookie(res, req);
+app.post('/auth/logout', asyncHandler(async (req, res) => {
+  const token = req.cookies[SESSION_COOKIE];
+  if (token) {
+    const tokenHash = hashSessionToken(token);
+    await query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
+  }
+  clearSessionCookie(res);
   res.redirect('/');
-});
+}));
 
 app.get('/auth/forgot-password', (req, res) => {
   res.render('pages/forgot-password', { error: null, success: null });
@@ -1073,6 +1084,7 @@ app.use((error, req, res, next) => {
   if (res.headersSent) {
     return next(error);
   }
+  console.error('Server error:', error);
   const message =
     error.code === '42P01'
       ? 'The database is still warming up. Please retry in a moment.'
