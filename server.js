@@ -366,7 +366,7 @@ app.post(
     const username = (req.body.username || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password;
-    const confirmPassword = req.body.confirmPassword;
+    const confirmPassword = req.body.confirmPassword || req.body.passwordConfirm;
     if (!username || !email || !password || !confirmPassword) {
       return res.render('pages/register', {
         error: 'All fields are required.',
@@ -413,16 +413,16 @@ app.post(
 );
 
 app.get('/auth/sign-in', (req, res) => {
-  res.render('pages/sign-in', { error: null });
+  res.render('pages/sign-in', { error: null, identifier: '' });
 });
 
 app.post(
   '/auth/sign-in',
   asyncHandler(async (req, res) => {
-    const identifier = (req.body.identifier || '').trim();
+    const identifier = (req.body.identifier || req.body.login || '').trim();
     const password = req.body.password;
     if (!identifier || !password) {
-      return res.render('pages/sign-in', { error: 'All fields are required.' });
+      return res.render('pages/sign-in', { error: 'All fields are required.', identifier });
     }
     let user = null;
     if (isValidEmail(identifier)) {
@@ -433,11 +433,11 @@ app.post(
       user = rows[0];
     }
     if (!user) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.' });
+      return res.render('pages/sign-in', { error: 'Invalid credentials.', identifier });
     }
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      return res.render('pages/sign-in', { error: 'Invalid credentials.' });
+      return res.render('pages/sign-in', { error: 'Invalid credentials.', identifier });
     }
     const token = await createSession(user.id);
     setSessionCookie(req, res, token);
