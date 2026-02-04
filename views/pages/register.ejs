@@ -1,33 +1,50 @@
 <%- include('../partials/header') %>
-<section class="container section narrow">
-  <div class="section-header">
-    <div>
-      <h1>Create your account</h1>
-      <p class="muted">Join Sellar to buy, sell, and message securely.</p>
+<section class="container section auth-layout">
+  <div class="auth-sidebar">
+    <p class="badge accent">Join the arena</p>
+    <h1>Create your account</h1>
+    <p class="muted">Join Sellar to buy, sell, and message securely.</p>
+    <ul class="auth-benefits">
+      <li>Build trust with verified profiles and ratings.</li>
+      <li>List gear in minutes with protected payments.</li>
+      <li>Keep conversations and tracking in one dashboard.</li>
+    </ul>
+    <div class="auth-support">
+      <span class="muted">Already have an account?</span>
+      <a class="link" href="/auth/sign-in">Sign in</a>
     </div>
   </div>
-  <% if (error) { %>
-    <div class="error"><%= error %></div>
-  <% } %>
-  <form class="form-card" method="POST" action="/auth/register">
-    <label>
-      Username
-      <input type="text" name="username" value="<%= form?.username || '' %>" required /> <!-- Preserve username input on error -->
-    </label>
-    <label>
-      Email
-      <input type="email" name="email" value="<%= form?.email || '' %>" required /> <!-- Preserve email input on error -->
-    </label>
-    <label>
-      Password
-      <input type="password" name="password" required /> <!-- Password not preserved for security -->
-      <span class="helper">Use at least 8 characters.</span>
-    </label>
-    <label>
-      Confirm password
-      <input type="password" name="passwordConfirm" required />
-    </label>
-    <button class="button primary" type="submit">Register</button>
-  </form>
+  <div class="auth-panel">
+    <div class="section-header">
+      <div>
+        <h2>Register</h2>
+        <p class="muted">Create your profile to start trading.</p>
+      </div>
+    </div>
+    <% if (error) { %>
+      <div class="error"><%= error %></div>
+    <% } %>
+    <form class="form-card" method="POST" action="/auth/register">
+      <label>
+        Username
+        <input type="text" name="username" value="<%= form?.username || '' %>" autocomplete="username" required />
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" value="<%= form?.email || '' %>" autocomplete="email" required />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="new-password" required />
+        <span class="helper">Use at least 8 characters.</span>
+      </label>
+      <label>
+        Confirm password
+        <input type="password" name="confirmPassword" autocomplete="new-password" required />
+        <span class="helper">Re-enter the password to confirm.</span>
+      </label>
+      <button class="button primary" type="submit">Register</button>
+    </form>
+  </div>
 </section>
 <%- include('../partials/footer') %>

@@ -41,12 +41,21 @@
 
     <label>
       Email or username
-      <input type="text" name="login" value="<%= login || '' %>" required />
+      <input
+        type="text"
+        name="identifier"
+        value="<%= identifier || '' %>"
+        autocomplete="username"
+        placeholder="you@example.com or gamer tag"
+        required
+      />
+      <span class="helper">Use the email or username you registered with.</span>
     </label>
 
     <label>
       Password
-      <input type="password" name="password" required />
+      <input type="password" name="password" autocomplete="current-password" required />
+      <span class="helper">Passwords are case-sensitive.</span>
     </label>
 
     <button class="button primary" type="submit">Sign in</button>
@@ -72,23 +81,24 @@
 
     <label>
       Username
-      <input type="text" name="username" value="<%= form?.username || '' %>" required />
+      <input type="text" name="username" value="<%= form?.username || '' %>" autocomplete="username" required />
     </label>
 
     <label>
       Email
-      <input type="email" name="email" value="<%= form?.email || '' %>" required />
+      <input type="email" name="email" value="<%= form?.email || '' %>" autocomplete="email" required />
     </label>
 
     <label>
       Password
-      <input type="password" name="password" required />
+      <input type="password" name="password" autocomplete="new-password" required />
       <span class="helper">Use at least 8 characters.</span>
     </label>
 
     <label>
       Confirm password
-      <input type="password" name="passwordConfirm" required />
+      <input type="password" name="confirmPassword" autocomplete="new-password" required />
+      <span class="helper">Re-enter the password to confirm.</span>
     </label>
 
     <button class="button primary" type="submit">Register</button>
