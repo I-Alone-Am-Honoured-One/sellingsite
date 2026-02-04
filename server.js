@@ -311,12 +311,46 @@ async function getSettingsPayload(userId) {
 
 app.use(asyncHandler(async (req, res, next) => {
   await refreshUserSession(req, res);
+  res.locals.currentPath = req.path;
+  res.locals.isActivePath = (pathPrefix) => req.path === pathPrefix || req.path.startsWith(`${pathPrefix}/`);
   next();
 }));
 
-app.get('/', (req, res) => {
-  res.render('pages/landing');
-});
+app.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const { rows: statsRows } = await query(
+      `SELECT
+        (SELECT COUNT(*) FROM users) AS users_count,
+        (SELECT COUNT(*) FROM listings) AS listings_count,
+        (SELECT COUNT(*) FROM orders) AS orders_count`
+    );
+    const stats = statsRows[0];
+    const { rows: latestListings } = await query(
+      `SELECT listings.*, users.username AS seller_name
+       FROM listings
+       JOIN users ON listings.seller_id = users.id
+       ORDER BY listings.created_at DESC
+       LIMIT 6`
+    );
+    const { rows: trendingListings } = await query(
+      `SELECT listings.*, users.username AS seller_name, COUNT(orders.id) AS order_count
+       FROM listings
+       JOIN users ON listings.seller_id = users.id
+       LEFT JOIN orders ON orders.listing_id = listings.id
+       GROUP BY listings.id, users.username
+       ORDER BY COUNT(orders.id) DESC, listings.created_at DESC
+       LIMIT 6`
+    );
+    res.render('pages/landing', {
+      stats,
+      categories: CATEGORIES,
+      latestListings,
+      trendingListings,
+      formatPrice
+    });
+  })
+);
 
 app.get('/terms', (req, res) => {
   res.render('pages/terms');
@@ -580,6 +614,7 @@ app.get(
   asyncHandler(async (req, res) => {
     const search = (req.query.search || '').trim();
     const category = req.query.category || '';
+    const condition = req.query.condition || '';
     let queryStr = `SELECT listings.*, users.username AS seller_name
                     FROM listings
                     JOIN users ON listings.seller_id = users.id
@@ -593,14 +628,20 @@ app.get(
       params.push(category);
       queryStr += ` AND listings.category = $${params.length}`;
     }
+    if (condition && CONDITIONS.includes(condition)) {
+      params.push(condition);
+      queryStr += ` AND listings.condition = $${params.length}`;
+    }
     queryStr += ` ORDER BY listings.created_at DESC`;
     const { rows: listings } = await query(queryStr, params);
     res.render('pages/marketplace', {
       listings,
       formatPrice,
       categories: CATEGORIES,
-      currentCategory: category,
-      currentSearch: search
+      conditions: CONDITIONS,
+      selectedCategory: category,
+      selectedCondition: condition,
+      search
     });
   })
 );
@@ -904,7 +945,9 @@ app.get(
        ORDER BY orders.created_at DESC`,
       [userId]
     );
-    res.render('pages/orders', { orders, formatPrice });
+    const buyerOrders = orders.filter((order) => order.buyer_id === userId);
+    const sellerOrders = orders.filter((order) => order.seller_id === userId);
+    res.render('pages/orders', { buyerOrders, sellerOrders, formatPrice });
   })
 );
 
@@ -948,7 +991,11 @@ app.post(
     if (!order) {
       return res.status(404).render('pages/error', { message: 'Order not found.' });
     }
-    await query('UPDATE orders SET status = $1 WHERE id = $2', ['shipped', orderId]);
+    const trackingCode = (req.body.trackingCode || '').trim();
+    await query(
+      'UPDATE orders SET status = $1, tracking_code = $2, shipped_at = NOW() WHERE id = $3',
+      ['shipped', trackingCode || null, orderId]
+    );
     return res.redirect(`/orders/${orderId}`);
   })
 );
@@ -964,7 +1011,10 @@ app.post(
     if (!order) {
       return res.status(404).render('pages/error', { message: 'Order not found.' });
     }
-    await query('UPDATE orders SET status = $1 WHERE id = $2', ['completed', orderId]);
+    await query(
+      'UPDATE orders SET status = $1, delivered_at = NOW(), confirmed_at = NOW() WHERE id = $2',
+      ['completed', orderId]
+    );
     return res.redirect(`/orders/${orderId}`);
   })
 );
@@ -981,8 +1031,8 @@ app.get(
               listings.title AS listing_title,
               listings.image_url AS listing_image,
               (SELECT COUNT(*) FROM messages WHERE messages.thread_id = threads.id AND messages.is_read = false AND messages.sender_id != $1) AS unread_count,
-              (SELECT body FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1) AS last_message,
-              (SELECT created_at FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1) AS last_message_at
+              (SELECT body FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1) AS latest_message,
+              (SELECT created_at FROM messages WHERE messages.thread_id = threads.id ORDER BY messages.created_at DESC LIMIT 1) AS latest_at
        FROM threads
        JOIN users AS buyer ON threads.buyer_id = buyer.id
        JOIN users AS seller ON threads.seller_id = seller.id

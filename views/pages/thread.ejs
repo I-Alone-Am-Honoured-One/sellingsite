@@ -7,13 +7,15 @@
     </div>
     <a class="link" href="/messages">Back to inbox</a>
   </div>
-  <div class="thread-body" id="threadBody">
+  <div class="thread-body">
+    <div class="thread-messages" id="threadMessages">
     <% messages.forEach(message => { %>
-      <div class="message <%= message.sender_id === currentUser.id ? 'own' : '' %>">
+      <div class="message <%= message.sender_id === currentUser.id ? 'sent' : 'received' %>">
         <p><%= message.body %></p>
         <span><%= message.sender_name %> · <%= new Date(message.created_at).toLocaleString() %></span>
       </div>
     <% }) %>
+    </div>
   </div>
   <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
     <input type="text" name="body" placeholder="Type your message" required />
@@ -22,9 +24,9 @@
 </section>
 
 <script>
-  const threadBody = document.getElementById('threadBody');
-  if (threadBody) {
-    threadBody.scrollTop = threadBody.scrollHeight;
+  const threadMessages = document.getElementById('threadMessages');
+  if (threadMessages) {
+    threadMessages.scrollTop = threadMessages.scrollHeight;
   }
 </script>
 <%- include('../partials/footer') %>

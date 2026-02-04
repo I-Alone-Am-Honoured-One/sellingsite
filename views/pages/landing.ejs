@@ -73,7 +73,14 @@
       <a class="link" href="/marketplace">See all</a>
     </div>
     <div class="card-grid">
-      <% latestListings.forEach(listing => { %>
+      <% if (!latestListings || latestListings.length === 0) { %>
+        <div class="empty-state">
+          <h3>No listings yet</h3>
+          <p>Be the first to post a listing in the marketplace.</p>
+          <a class="button ghost" href="/listings/new">Create listing</a>
+        </div>
+      <% } %>
+      <% (latestListings || []).forEach(listing => { %>
         <a class="card" href="/listings/<%= listing.id %>">
           <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
           <div class="card-body">
@@ -98,7 +105,14 @@
     </div>
   </div>
   <div class="card-grid">
-    <% trendingListings.forEach(listing => { %>
+    <% if (!trendingListings || trendingListings.length === 0) { %>
+      <div class="empty-state">
+        <h3>Trending list is warming up</h3>
+        <p>New activity will appear here as buyers and sellers connect.</p>
+        <a class="button ghost" href="/marketplace">Browse listings</a>
+      </div>
+    <% } %>
+    <% (trendingListings || []).forEach(listing => { %>
       <a class="card" href="/listings/<%= listing.id %>">
         <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
         <div class="card-body">

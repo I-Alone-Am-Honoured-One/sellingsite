@@ -16,7 +16,12 @@
       <% } %>
       <% threads.forEach(thread => { %>
         <a class="thread-item" href="/messages/<%= thread.id %>">
-          <div>
+          <% if (thread.listing_image) { %>
+            <img src="<%= thread.listing_image %>" alt="<%= thread.listing_title || 'Listing image' %>" />
+          <% } else { %>
+            <div class="thread-placeholder">💬</div>
+          <% } %>
+          <div class="thread-summary">
             <div class="thread-title">
               <h3><%= thread.listing_title || 'General inquiry' %></h3>
               <% if (Number(thread.unread_count) > 0) { %>

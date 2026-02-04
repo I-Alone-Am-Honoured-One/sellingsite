@@ -63,10 +63,10 @@
     <div class="form-actions">
       <button class="button primary" type="submit">Save changes</button>
       <a class="button ghost" href="/listings/<%= listing.id %>">Cancel</a>
-      <form class="inline-form" method="POST" action="/listings/<%= listing.id %>/delete" onsubmit="return confirm('Delete this listing? This cannot be undone.');">
-        <button class="button danger ghost" type="submit">Delete listing</button>
-      </form>
     </div>
+  </form>
+  <form class="inline-form" method="POST" action="/listings/<%= listing.id %>/delete" onsubmit="return confirm('Delete this listing? This cannot be undone.');">
+    <button class="button danger ghost" type="submit">Delete listing</button>
   </form>
 </section>
 <%- include('../partials/footer') %>
