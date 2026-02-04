@@ -51,11 +51,11 @@
       </div>
       
       <nav class="nav-links">
-        <a href="/" <% if (locals.currentPath === '/') { %>class="active"<% } %>>Home</a>
-        <a href="/marketplace" <% if (locals.currentPath === '/marketplace') { %>class="active"<% } %>>Marketplace</a>
+        <a href="/" <% if (isActivePath('/')) { %>class="active"<% } %>>Home</a>
+        <a href="/marketplace" <% if (isActivePath('/marketplace')) { %>class="active"<% } %>>Marketplace</a>
         <% if (locals.currentUser) { %>
-          <a href="/listings/new" <% if (locals.currentPath === '/listings/new') { %>class="active"<% } %>>Create Listing</a>
-          <a href="/messages" <% if (locals.currentPath === '/messages') { %>class="active"<% } %>>Messages</a>
+          <a href="/listings/new" <% if (isActivePath('/listings/new')) { %>class="active"<% } %>>Create Listing</a>
+          <a href="/messages" <% if (isActivePath('/messages')) { %>class="active"<% } %>>Messages</a>
         <% } %>
       </nav>
       

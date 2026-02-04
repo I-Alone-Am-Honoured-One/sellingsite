@@ -22,19 +22,9 @@
           <span>Shipped</span>
           <p><%= order.shipped_at ? new Date(order.shipped_at).toLocaleString() : 'Pending' %></p>
         </div>
-        <div class="timeline-step <%= order.delivered_at ? 'complete' : '' %>">
-          <span>Delivered</span>
-          <p><%= order.delivered_at ? new Date(order.delivered_at).toLocaleString() : 'Pending' %></p>
-        </div>
-        <div class="timeline-step <%= order.confirmed_at ? 'complete' : order.status === 'DISPUTED' ? 'warning' : '' %>">
-          <span><%= order.status === 'DISPUTED' ? 'Disputed' : 'Confirmed' %></span>
-          <p>
-            <% if (order.status === 'DISPUTED') { %>
-              <%= order.disputed_at ? new Date(order.disputed_at).toLocaleString() : 'Pending' %>
-            <% } else { %>
-              <%= order.confirmed_at ? new Date(order.confirmed_at).toLocaleString() : 'Pending' %>
-            <% } %>
-          </p>
+        <div class="timeline-step <%= order.confirmed_at ? 'complete' : '' %>">
+          <span>Completed</span>
+          <p><%= order.confirmed_at ? new Date(order.confirmed_at).toLocaleString() : 'Pending' %></p>
         </div>
       </div>
 
@@ -53,25 +43,20 @@
               Tracking number (or leave blank)
               <input type="text" name="trackingCode" placeholder="Tracking number" />
             </label>
-            <button class="button primary" type="submit">Mark as shipped</button>
-          </form>
-          <form method="POST" action="/orders/<%= order.id %>/deliver">
-            <button class="button ghost" type="submit">Mark as delivered</button>
+            <button class="button primary" type="submit" <%= order.status === 'completed' ? 'disabled' : '' %>>
+              Mark as shipped
+            </button>
           </form>
         </div>
       <% } %>
       <% if (currentUser.id === order.buyer_id) { %>
         <div class="action-column">
-          <div class="notice">Confirm within 24 hours after delivery to release funds.</div>
-          <form method="POST" action="/orders/<%= order.id %>/confirm">
-            <button class="button primary" type="submit" <%= order.status !== 'DELIVERED' ? 'disabled' : '' %>>Confirm received</button>
+          <div class="notice">Confirm once the item arrives to release funds.</div>
+          <form method="POST" action="/orders/<%= order.id %>/complete">
+            <button class="button primary" type="submit" <%= order.status !== 'shipped' ? 'disabled' : '' %>>
+              Confirm received
+            </button>
           </form>
-          <form method="POST" action="/orders/<%= order.id %>/dispute">
-            <button class="button ghost" type="submit" <%= order.status !== 'DELIVERED' ? 'disabled' : '' %>>Report issue</button>
-          </form>
-          <% if (remainingMs !== null) { %>
-            <p class="muted" data-countdown="<%= remainingMs %>">Time left to confirm: calculating…</p>
-          <% } %>
         </div>
       <% } %>
       <a class="link" href="/messages">Go to messages</a>
@@ -80,17 +65,9 @@
 </section>
 
 <script>
-  const countdownEl = document.querySelector('[data-countdown]');
-  if (countdownEl) {
-    const totalMs = Number(countdownEl.dataset.countdown);
-    const start = Date.now();
-    const updateCountdown = () => {
-      const remaining = Math.max(0, totalMs - (Date.now() - start));
-      const hours = Math.ceil(remaining / 3600000);
-      countdownEl.textContent = `Time left to confirm: ${hours} hour${hours === 1 ? '' : 's'}.`;
-    };
-    updateCountdown();
-    setInterval(updateCountdown, 60000);
+  const statusBadge = document.querySelector('.status-badge');
+  if (statusBadge) {
+    statusBadge.textContent = statusBadge.textContent.replace(/_/g, ' ');
   }
 </script>
 <%- include('../partials/footer') %>

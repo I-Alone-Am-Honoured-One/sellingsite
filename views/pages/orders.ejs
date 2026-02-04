@@ -23,17 +23,17 @@
     <% buyerOrders.forEach(order => { %>
       <a class="order-card" href="/orders/<%= order.id %>">
         <img src="<%= order.image_url %>" alt="<%= order.title %>" />
-        <div class="order-info">
+        <div class="order-details">
           <h3><%= order.title %></h3>
           <p class="meta">Seller: <%= order.seller_name %></p>
           <div class="status-row">
             <span class="status-badge <%= order.status.toLowerCase() %>"><%= order.status %></span>
             <span class="meta">Escrow protected</span>
           </div>
-        </div>
-        <div class="order-meta">
-          <div class="price"><%= formatPrice(order.price_cents) %></div>
-          <span class="link">View order</span>
+          <div class="order-meta">
+            <div class="price"><%= formatPrice(order.price_cents) %></div>
+            <span class="link">View order</span>
+          </div>
         </div>
       </a>
     <% }) %>
@@ -50,17 +50,17 @@
     <% sellerOrders.forEach(order => { %>
       <a class="order-card" href="/orders/<%= order.id %>">
         <img src="<%= order.image_url %>" alt="<%= order.title %>" />
-        <div class="order-info">
+        <div class="order-details">
           <h3><%= order.title %></h3>
           <p class="meta">Buyer: <%= order.buyer_name %></p>
           <div class="status-row">
             <span class="status-badge <%= order.status.toLowerCase() %>"><%= order.status %></span>
             <span class="meta">Awaiting next action</span>
           </div>
-        </div>
-        <div class="order-meta">
-          <div class="price"><%= formatPrice(order.price_cents) %></div>
-          <span class="link">View order</span>
+          <div class="order-meta">
+            <div class="price"><%= formatPrice(order.price_cents) %></div>
+            <span class="link">View order</span>
+          </div>
         </div>
       </a>
     <% }) %>

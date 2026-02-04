@@ -9,7 +9,7 @@
   <% if (error) { %>
     <div class="error"><%= error %></div>
   <% } %>
-  <form class="form-card" method="POST" action="/listings" enctype="multipart/form-data">
+  <form class="form-card" method="POST" action="/listings/new" enctype="multipart/form-data">
     <label>
       Title
       <input type="text" name="title" value="<%= form?.title || '' %>" required />
@@ -49,6 +49,11 @@
         <span class="helper">PNG, JPG, WEBP. Max 5MB.</span>
       </label>
     </div>
+    <label>
+      Shipping details
+      <textarea name="shippingDetails" rows="3" required><%= form?.shippingDetails || '' %></textarea>
+      <span class="helper">Include carrier, delivery time, or local pickup notes.</span>
+    </label>
     <button class="button primary" type="submit">Publish Listing</button>
   </form>
 </section>

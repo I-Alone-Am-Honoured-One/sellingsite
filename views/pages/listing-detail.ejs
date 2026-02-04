@@ -30,7 +30,9 @@
             <form method="POST" action="/listings/<%= listing.id %>/buy">
               <button class="button primary" type="submit">Buy now</button>
             </form>
-            <form method="POST" action="/listings/<%= listing.id %>/message">
+            <form class="inline-message-form" method="POST" action="/messages/new">
+              <input type="hidden" name="listing_id" value="<%= listing.id %>" />
+              <input type="text" name="body" placeholder="Ask the seller a question..." required />
               <button class="button ghost" type="submit">Message seller</button>
             </form>
           <% } %>
