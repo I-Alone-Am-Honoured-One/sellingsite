@@ -1,11 +1,8 @@
 const { Pool } = require("pg");
 
-const isProduction = process.env.NODE_ENV === "production";
-
-// Render Postgres usually needs SSL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 async function query(text, params) {
