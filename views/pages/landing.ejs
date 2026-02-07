@@ -18,17 +18,26 @@
         <% } %>
       </div>
       <div class="hero-stats">
-        <div>
-          <h3><%= stats?.users_count || 0 %>+</h3> <!-- Use optional chaining to avoid errors if stats is missing -->
-          <p>Active traders</p>
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">👾</span>
+          <div>
+            <h3><%= stats?.users_count || 0 %>+</h3> <!-- Use optional chaining to avoid errors if stats is missing -->
+            <p>Active traders</p>
+          </div>
         </div>
-        <div>
-          <h3><%= stats?.listings_count || 0 %>+</h3>
-          <p>Listings live</p>
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">🎯</span>
+          <div>
+            <h3><%= stats?.listings_count || 0 %>+</h3>
+            <p>Listings live</p>
+          </div>
         </div>
-        <div>
-          <h3><%= stats?.orders_count || 0 %>+</h3>
-          <p>Trades protected</p>
+        <div class="stat-card">
+          <span class="stat-icon" aria-hidden="true">🛡️</span>
+          <div>
+            <h3><%= stats?.orders_count || 0 %>+</h3>
+            <p>Trades protected</p>
+          </div>
         </div>
       </div>
       <div class="hero-contact">
