@@ -1,5 +1,5 @@
 <%- include('../partials/header') %>
-<div class="landing-page">
+<% const categoryIcons = { Games: '🎮', Consoles: '🕹️', Accessories: '🎧', 'Gift Cards': '🎁' }; %>
 <section class="hero">
   <div class="container hero-content">
     <div class="hero-copy">
@@ -31,6 +31,16 @@
           <p>Trades protected</p>
         </div>
       </div>
+      <div class="hero-contact">
+        <div class="contact-card">
+          <span class="contact-icon" aria-hidden="true">📞</span>
+          <div>
+            <p class="eyebrow">Support line</p>
+            <a class="contact-phone" href="tel:+1-888-555-7345">1-888-555-7345</a>
+            <p class="muted">Text or call 9am–9pm PT.</p>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="hero-card">
       <h3>How it works</h3>
@@ -57,6 +67,7 @@
   <div class="category-grid">
     <% (categories || []).forEach(category => { %> <!-- Safely iterate even if categories is undefined -->
       <a class="category-card" href="/marketplace?category=<%= encodeURIComponent(category) %>">
+        <span class="category-icon" aria-hidden="true"><%= categoryIcons[category] || '✨' %></span>
         <h3><%= category %></h3>
         <p>Shop the hottest <%= category.toLowerCase() %> drops.</p>
       </a>
