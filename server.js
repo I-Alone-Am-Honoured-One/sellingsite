@@ -25,6 +25,28 @@ const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
 const OAUTH_STATE_COOKIE = 'oauth_state';
 const OAUTH_ACTION_COOKIE = 'oauth_action';
 const OAUTH_LINK_COOKIE = 'oauth_link';
+const RESERVED_PROFILE_PATHS = new Set([
+  'marketplace',
+  'listings',
+  'auth',
+  'profile',
+  'settings',
+  'messages',
+  'orders',
+  'dashboard',
+  'favorites',
+  'chess',
+  'terms',
+  'thread',
+  'orders',
+  'uploads',
+  'admin',
+  'reset-password',
+  'forgot-password',
+  'sign-in',
+  'register',
+  'link-google'
+]);
 
 const cloudinaryConfig = {
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -500,6 +522,13 @@ function isAdminUser(user) {
   );
 }
 
+function isReservedProfilePath(username) {
+  if (!username) {
+    return true;
+  }
+  return RESERVED_PROFILE_PATHS.has(username.toLowerCase());
+}
+
 function requireAdmin(req, res, next) {
   if (!isAdminUser(res.locals.currentUser)) {
     return res.status(403).render('pages/error', { message: 'You do not have access to this page.' });
@@ -520,6 +549,38 @@ async function getProfilePayload(userId) {
   const { rows: listings } = await query(
     'SELECT * FROM listings WHERE seller_id = $1 ORDER BY created_at DESC LIMIT 6',
     [userId]
+  );
+  return { user, listingCount, salesCount, listings };
+}
+
+async function getPublicProfilePayload(username) {
+  const trimmedUsername = (username || '').trim();
+  if (!trimmedUsername) {
+    return null;
+  }
+  const { rows: userRows } = await query(
+    'SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1',
+    [trimmedUsername]
+  );
+  const user = userRows[0];
+  if (!user) {
+    return null;
+  }
+  const { rows: listingRows } = await query(
+    'SELECT COUNT(*) as count FROM listings WHERE seller_id = $1',
+    [user.id]
+  );
+  const listingCount = Number(listingRows[0].count);
+  const { rows: salesRows } = await query('SELECT COUNT(*) as count FROM orders WHERE seller_id = $1', [user.id]);
+  const salesCount = Number(salesRows[0].count);
+  const { rows: listings } = await query(
+    `SELECT listings.*, users.username AS seller_name
+     FROM listings
+     JOIN users ON listings.seller_id = users.id
+     WHERE listings.seller_id = $1
+     ORDER BY listings.created_at DESC
+     LIMIT 8`,
+    [user.id]
   );
   return { user, listingCount, salesCount, listings };
 }
@@ -2156,6 +2217,26 @@ app.get(
     }
     const opponentName = match.white_player_id === userId ? match.black_name : match.white_name;
     res.render('pages/chess-match', { match, opponentName });
+  })
+);
+
+app.get(
+  '/:username',
+  asyncHandler(async (req, res) => {
+    const username = (req.params.username || '').trim();
+    if (!username || username.includes('.') || isReservedProfilePath(username)) {
+      return res.status(404).render('pages/error', { message: 'User not found.' });
+    }
+    const profilePayload = await getPublicProfilePayload(username);
+    if (!profilePayload) {
+      return res.status(404).render('pages/error', { message: 'User not found.' });
+    }
+    const isSelf = res.locals.currentUser && res.locals.currentUser.id === profilePayload.user.id;
+    return res.render('pages/public-profile', {
+      ...profilePayload,
+      formatPrice,
+      isSelf
+    });
   })
 );
 

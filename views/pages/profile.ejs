@@ -33,6 +33,11 @@
           <h1 class="profile-display-name"><%= user.username %></h1>
           <a class="button primary compact" href="/settings">Edit Profile</a>
         </div>
+
+        <div class="profile-link-row">
+          <span class="muted">Public profile:</span>
+          <a class="profile-link" href="/<%= user.username %>">/<%= user.username %></a>
+        </div>
         
         <% if (user.steam_profile_url || user.steam_id) { %>
           <p class="profile-steam">
