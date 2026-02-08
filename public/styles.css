@@ -531,7 +531,8 @@ img {
   top: 0;
   left: 0;
   user-select: none;
-  cursor: grab;
+  pointer-events: none;
+  cursor: inherit;
   touch-action: none;
   transform-origin: top left;
   max-width: none;
@@ -540,7 +541,7 @@ img {
   transition: opacity 0.2s ease;
 }
 
-.image-crop-image.is-dragging {
+.image-crop-frame.is-dragging {
   cursor: grabbing;
 }
 
