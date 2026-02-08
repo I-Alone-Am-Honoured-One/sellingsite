@@ -22,6 +22,12 @@ const SESSION_COOKIE = 'session';
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const CATEGORIES = ['Games', 'Consoles', 'Accessories', 'Gift Cards'];
 const CONDITIONS = ['Acceptable', 'Used', 'Like New', 'Unpacked'];
+const MAX_USERNAME_LENGTH = 24;
+const MAX_BIO_LENGTH = 280;
+const MAX_LISTING_TITLE_LENGTH = 80;
+const MAX_LISTING_DESCRIPTION_LENGTH = 2000;
+const MAX_SHIPPING_DETAILS_LENGTH = 280;
+const MAX_MESSAGE_LENGTH = 2000;
 const OAUTH_STATE_COOKIE = 'oauth_state';
 const OAUTH_ACTION_COOKIE = 'oauth_action';
 const OAUTH_LINK_COOKIE = 'oauth_link';
@@ -128,6 +134,19 @@ ensureListingEngagementTables().catch((error) => {
 
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function normalizeText(value, maxLength) {
+  if (!value) return '';
+  const trimmed = value.trim().replace(/\s+/g, ' ');
+  if (typeof maxLength === 'number') {
+    return trimmed.slice(0, maxLength);
+  }
+  return trimmed;
+}
+
+function isValidHexColor(value) {
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value);
 }
 
 async function incrementListingView(listingId) {
@@ -1181,10 +1200,23 @@ app.post(
     });
   }),
   asyncHandler(async (req, res) => {
-    const { title, description, price, category, condition } = req.body;
+    const title = normalizeText(req.body.title, MAX_LISTING_TITLE_LENGTH);
+    const description = normalizeText(req.body.description, MAX_LISTING_DESCRIPTION_LENGTH);
+    const price = (req.body.price || '').trim();
+    const category = req.body.category || '';
+    const condition = req.body.condition || '';
+    const shippingDetails = normalizeText(req.body.shippingDetails, MAX_SHIPPING_DETAILS_LENGTH);
     if (!title || !description || !price || !category || !condition) {
       return res.render('pages/create-listing', {
         error: 'All fields are required.',
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    }
+    if (title.length > MAX_LISTING_TITLE_LENGTH || description.length > MAX_LISTING_DESCRIPTION_LENGTH) {
+      return res.render('pages/create-listing', {
+        error: `Title must be under ${MAX_LISTING_TITLE_LENGTH} characters and description under ${MAX_LISTING_DESCRIPTION_LENGTH} characters.`,
         categories: CATEGORIES,
         conditions: CONDITIONS,
         form: req.body
@@ -1234,11 +1266,10 @@ app.post(
         form: req.body
       });
     }
-    const shippingDetails = (req.body.shippingDetails || '').trim() || 'Not specified';
     await query(
       `INSERT INTO listings (seller_id, title, description, price_cents, category, condition, image_url, shipping_details)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [res.locals.currentUser.id, title, description, priceCents, category, condition, imageUrl, shippingDetails]
+      [res.locals.currentUser.id, title, description, priceCents, category, condition, imageUrl, shippingDetails || null]
     );
     return res.redirect('/marketplace');
   })
@@ -1304,10 +1335,24 @@ app.post(
       return res.status(404).render('pages/error', { message: 'Listing not found.' });
     }
 
-    const { title, description, price, category, condition } = req.body;
+    const title = normalizeText(req.body.title, MAX_LISTING_TITLE_LENGTH);
+    const description = normalizeText(req.body.description, MAX_LISTING_DESCRIPTION_LENGTH);
+    const price = (req.body.price || '').trim();
+    const category = req.body.category || '';
+    const condition = req.body.condition || '';
+    const shippingDetails = normalizeText(req.body.shippingDetails, MAX_SHIPPING_DETAILS_LENGTH);
     if (!title || !description || !price || !category || !condition) {
       return res.render('pages/edit-listing', {
         error: 'All fields are required.',
+        listing,
+        categories: CATEGORIES,
+        conditions: CONDITIONS,
+        form: req.body
+      });
+    }
+    if (title.length > MAX_LISTING_TITLE_LENGTH || description.length > MAX_LISTING_DESCRIPTION_LENGTH) {
+      return res.render('pages/edit-listing', {
+        error: `Title must be under ${MAX_LISTING_TITLE_LENGTH} characters and description under ${MAX_LISTING_DESCRIPTION_LENGTH} characters.`,
         listing,
         categories: CATEGORIES,
         conditions: CONDITIONS,
@@ -1368,7 +1413,7 @@ app.post(
            image_url = $6,
            shipping_details = $7
        WHERE id = $8 AND seller_id = $9`,
-      [title, description, priceCents, category, condition, imageUrl, listing.shipping_details, listingId, userId]
+      [title, description, priceCents, category, condition, imageUrl, shippingDetails || null, listingId, userId]
     );
     return res.redirect(`/listings/${listingId}`);
   })
@@ -1613,10 +1658,14 @@ app.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const listingId = req.body.listing_id;
-    const body = (req.body.body || '').trim();
-    if (!body) {
+    const rawBody = (req.body.body || '').trim();
+    if (!rawBody) {
       return res.redirect(`/listings/${listingId}`);
     }
+    if (rawBody.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).render('pages/error', { message: 'Message is too long.' });
+    }
+    const body = normalizeText(rawBody, MAX_MESSAGE_LENGTH);
     const { rows: listingRows } = await query('SELECT * FROM listings WHERE id = $1', [listingId]);
     const listing = listingRows[0];
     if (!listing) {
@@ -1697,10 +1746,14 @@ app.post(
   requireAuth,
   asyncHandler(async (req, res) => {
     const threadId = req.params.id;
-    const body = (req.body.body || '').trim();
-    if (!body) {
+    const rawBody = (req.body.body || '').trim();
+    if (!rawBody) {
       return res.redirect(`/messages/${threadId}`);
     }
+    if (rawBody.length > MAX_MESSAGE_LENGTH) {
+      return res.status(400).render('pages/error', { message: 'Message is too long.' });
+    }
+    const body = normalizeText(rawBody, MAX_MESSAGE_LENGTH);
     const { rows } = await query('SELECT * FROM threads WHERE id = $1', [threadId]);
     const thread = rows[0];
     if (!thread) {
@@ -1765,8 +1818,9 @@ app.post(
     });
   },
   asyncHandler(async (req, res) => {
-    const username = (req.body.username || '').trim();
-    const bio = (req.body.bio || '').trim();
+    const username = normalizeText(req.body.username, MAX_USERNAME_LENGTH);
+    const rawBio = (req.body.bio || '').trim();
+    const bio = normalizeText(rawBio, MAX_BIO_LENGTH);
     const profileBackgroundColor = (req.body.profile_background_color || '').trim();
     let error = null;
     let success = null;
@@ -1779,6 +1833,10 @@ app.post(
 
     if (!username) {
       error = 'Username is required.';
+    } else if (username.length > MAX_USERNAME_LENGTH) {
+      error = `Username must be under ${MAX_USERNAME_LENGTH} characters.`;
+    } else if (rawBio.length > MAX_BIO_LENGTH) {
+      error = `Bio must be under ${MAX_BIO_LENGTH} characters.`;
     } else {
       const { rows: existingUsers } = await query(
         'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2 LIMIT 1',
@@ -1787,6 +1845,10 @@ app.post(
       if (existingUsers.length) {
         error = 'That username is already in use.';
       }
+    }
+
+    if (!error && profileBackgroundColor && !isValidHexColor(profileBackgroundColor)) {
+      error = 'Background color must be a valid hex value.';
     }
 
     const clearAvatar = req.body.clear_avatar === 'true';
