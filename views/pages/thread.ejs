@@ -17,6 +17,15 @@
       </div>
     <% }) %>
     </div>
+    <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
+      <textarea class="message-textarea" name="body" rows="3" placeholder="Type your message" required></textarea>
+      <button class="button primary send-button" type="submit" aria-label="Send message">
+        <span class="send-label">Send</span>
+        <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 11.5l17-8-6.5 17-2-6.5L3 11.5z" fill="currentColor" />
+        </svg>
+      </button>
+    </form>
   </div>
   <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
     <textarea name="body" rows="3" placeholder="Type your message" required></textarea>
