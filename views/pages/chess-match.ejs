@@ -1,0 +1,176 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Chess vs <%= opponentName %></h1>
+      <p class="muted">Click a piece to preview its available moves.</p>
+    </div>
+    <a class="link" href="/chess">Back to chess lobby</a>
+  </div>
+
+  <div class="chess-board-wrapper">
+    <div class="chess-board" id="chessBoard"></div>
+  </div>
+</section>
+
+<script>
+  const boardEl = document.getElementById('chessBoard');
+  const pieces = {
+    wp: '♙',
+    wr: '♖',
+    wn: '♘',
+    wb: '♗',
+    wq: '♕',
+    wk: '♔',
+    bp: '♟',
+    br: '♜',
+    bn: '♞',
+    bb: '♝',
+    bq: '♛',
+    bk: '♚'
+  };
+
+  const boardState = [
+    ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br'],
+    ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    ['wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp'],
+    ['wr', 'wn', 'wb', 'wq', 'wk', 'wb', 'wn', 'wr']
+  ];
+
+  function inBounds(row, col) {
+    return row >= 0 && row < 8 && col >= 0 && col < 8;
+  }
+
+  function pieceColor(piece) {
+    return piece?.startsWith('w') ? 'w' : piece?.startsWith('b') ? 'b' : null;
+  }
+
+  function getMoves(row, col) {
+    const piece = boardState[row][col];
+    if (!piece) return [];
+    const color = pieceColor(piece);
+    const type = piece[1];
+    const moves = [];
+
+    const addMove = (r, c) => {
+      if (!inBounds(r, c)) return false;
+      const target = boardState[r][c];
+      if (!target) {
+        moves.push([r, c]);
+        return true;
+      }
+      if (pieceColor(target) !== color) {
+        moves.push([r, c]);
+      }
+      return false;
+    };
+
+    if (type === 'p') {
+      const direction = color === 'w' ? -1 : 1;
+      const startRow = color === 'w' ? 6 : 1;
+      if (!boardState[row + direction]?.[col]) {
+        addMove(row + direction, col);
+        if (row === startRow && !boardState[row + direction * 2]?.[col]) {
+          addMove(row + direction * 2, col);
+        }
+      }
+      [[direction, -1], [direction, 1]].forEach(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+        if (inBounds(r, c) && boardState[r][c] && pieceColor(boardState[r][c]) !== color) {
+          moves.push([r, c]);
+        }
+      });
+      return moves;
+    }
+
+    if (type === 'n') {
+      const jumps = [
+        [2, 1],
+        [2, -1],
+        [-2, 1],
+        [-2, -1],
+        [1, 2],
+        [1, -2],
+        [-1, 2],
+        [-1, -2]
+      ];
+      jumps.forEach(([dr, dc]) => addMove(row + dr, col + dc));
+      return moves;
+    }
+
+    if (type === 'k') {
+      for (let dr = -1; dr <= 1; dr += 1) {
+        for (let dc = -1; dc <= 1; dc += 1) {
+          if (dr === 0 && dc === 0) continue;
+          addMove(row + dr, col + dc);
+        }
+      }
+      return moves;
+    }
+
+    const directions = [];
+    if (type === 'r' || type === 'q') {
+      directions.push([1, 0], [-1, 0], [0, 1], [0, -1]);
+    }
+    if (type === 'b' || type === 'q') {
+      directions.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
+    }
+    directions.forEach(([dr, dc]) => {
+      let r = row + dr;
+      let c = col + dc;
+      while (inBounds(r, c)) {
+        const canContinue = addMove(r, c);
+        if (!canContinue) break;
+        r += dr;
+        c += dc;
+      }
+    });
+    return moves;
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const square = document.createElement('button');
+        square.type = 'button';
+        square.className = `chess-square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+        square.dataset.row = row;
+        square.dataset.col = col;
+        const piece = boardState[row][col];
+        if (piece) {
+          square.textContent = pieces[piece];
+          square.classList.add('occupied');
+        }
+        square.addEventListener('click', () => selectSquare(row, col));
+        boardEl.appendChild(square);
+      }
+    }
+  }
+
+  function clearHighlights() {
+    document.querySelectorAll('.chess-square.highlight').forEach((square) => {
+      square.classList.remove('highlight');
+    });
+  }
+
+  function selectSquare(row, col) {
+    clearHighlights();
+    const piece = boardState[row][col];
+    if (!piece) return;
+    const moves = getMoves(row, col);
+    moves.forEach(([r, c]) => {
+      const selector = `.chess-square[data-row="${r}"][data-col="${c}"]`;
+      const target = document.querySelector(selector);
+      if (target) target.classList.add('highlight');
+    });
+  }
+
+  renderBoard();
+</script>
+<%- include('../partials/footer') %>

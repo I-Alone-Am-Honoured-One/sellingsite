@@ -1,0 +1,39 @@
+<%- include('../partials/header') %>
+<section class="container section auth-layout">
+  <div class="auth-sidebar">
+    <p class="badge accent">Link Google</p>
+    <h1>Confirm your password</h1>
+    <p class="muted">We found an existing account for <%= email %>. Enter your password to link Google sign-in.</p>
+    <ul class="auth-benefits">
+      <li>Keep your existing data and listings.</li>
+      <li>Use Google for faster sign-in.</li>
+      <li>You can unlink anytime in settings.</li>
+    </ul>
+  </div>
+  <div class="auth-panel">
+    <div class="section-header">
+      <div>
+        <h2>Link Google</h2>
+        <p class="muted">Verify your account to complete linking.</p>
+      </div>
+    </div>
+    <% if (error) { %>
+      <div class="error"><%= error %></div>
+    <% } %>
+    <form class="form-card" method="POST" action="/auth/google/link">
+      <label>
+        Email address
+        <input type="email" value="<%= email %>" disabled />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="current-password" required />
+      </label>
+      <button class="button primary" type="submit">Link Google</button>
+    </form>
+    <div class="form-footer">
+      <a href="/auth/sign-in">Back to sign in</a>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>
