@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
@@ -38,21 +37,7 @@ if (isCloudinaryConfigured) {
   });
 }
 
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-if (!isCloudinaryConfigured && !fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = isCloudinaryConfigured
-  ? multer.memoryStorage()
-  : multer.diskStorage({
-      destination: uploadDir,
-      filename: (req, file, cb) => {
-        const timestamp = Date.now();
-        const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '-');
-        cb(null, `${timestamp}-${safeName}`);
-      }
-    });
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -387,7 +372,9 @@ async function uploadImage(file) {
     return null;
   }
   if (!isCloudinaryConfigured) {
-    return `/uploads/${file.filename}`;
+    const error = new Error('Cloudinary is not configured for uploads.');
+    error.status = 500;
+    throw error;
   }
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
