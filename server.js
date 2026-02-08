@@ -90,6 +90,9 @@ ensureUserAuthColumns().catch((error) => {
 ensureChessTables().catch((error) => {
   console.error('Failed to ensure chess tables exist:', error);
 });
+ensureAdminAuditTable().catch((error) => {
+  console.error('Failed to ensure admin audit table exists:', error);
+});
 
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -114,6 +117,8 @@ async function ensureUserAuthColumns() {
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_profile_url TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_url TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_color TEXT');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned BOOLEAN DEFAULT FALSE');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique ON users (google_id)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique ON users (google_email)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_steam_id_unique ON users (steam_id)');
@@ -134,6 +139,20 @@ async function ensureChessTables() {
       id SERIAL PRIMARY KEY,
       white_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       black_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+  );
+}
+
+async function ensureAdminAuditTable() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id INTEGER,
+      details TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`
   );
