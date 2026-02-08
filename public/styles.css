@@ -465,22 +465,22 @@ img {
 }
 
 .profile-header-section.profile-preview .profile-banner {
-  height: 100px;
+  height: 120px;
 }
 
 .profile-header-section.profile-preview .profile-header-content {
-  padding: 0 1.5rem 1.5rem;
-  margin-top: -36px;
+  padding: 0 2rem 2rem;
+  margin-top: -45px;
 }
 
 .profile-header-section.profile-preview .profile-avatar-large {
-  width: 90px;
-  height: 90px;
-  font-size: 2.25rem;
+  width: 120px;
+  height: 120px;
+  font-size: 3rem;
 }
 
 .profile-header-section.profile-preview .profile-display-name {
-  font-size: 1.5rem;
+  font-size: 2rem;
 }
 
 .profile-banner {
@@ -572,6 +572,7 @@ img {
   border-radius: 1rem;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.4);
+  touch-action: none;
 }
 
 .image-crop-frame::before,
@@ -3339,6 +3340,25 @@ textarea {
 
   .profile-banner {
     height: 120px;
+  }
+
+  .profile-header-section.profile-preview .profile-banner {
+    height: 120px;
+  }
+
+  .profile-header-section.profile-preview .profile-header-content {
+    padding: 0 1.5rem 1.5rem;
+    margin-top: -36px;
+  }
+
+  .profile-header-section.profile-preview .profile-avatar-large {
+    width: 90px;
+    height: 90px;
+    font-size: 2.25rem;
+  }
+
+  .profile-header-section.profile-preview .profile-display-name {
+    font-size: 1.35rem;
   }
 
   .stat-number {
