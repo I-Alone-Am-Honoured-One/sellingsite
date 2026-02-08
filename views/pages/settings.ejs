@@ -75,6 +75,49 @@
       </div>
     </form>
 
+    <div class="form-card settings-card">
+      <h3>Connected accounts</h3>
+      <p class="muted">Link external accounts for faster sign-in and sharing.</p>
+      <div class="linked-account">
+        <div>
+          <strong>Google</strong>
+          <p class="muted">
+            <%= user.google_email ? `Linked as ${user.google_email}` : 'Not linked yet.' %>
+          </p>
+        </div>
+        <div class="linked-actions">
+          <% if (user.google_id) { %>
+            <form method="POST" action="/settings">
+              <input type="hidden" name="action" value="unlink_google" />
+              <button class="button ghost small" type="submit">Unlink</button>
+            </form>
+          <% } else { %>
+            <a class="button primary small" href="/auth/google?action=link">Connect Google</a>
+          <% } %>
+        </div>
+      </div>
+      <form class="linked-account-form" method="POST" action="/settings">
+        <input type="hidden" name="action" value="steam" />
+        <div>
+          <strong>Steam</strong>
+          <p class="muted">Add a Steam profile link to show your gaming identity.</p>
+        </div>
+        <label>
+          Steam profile URL
+          <input type="url" name="steam_profile_url" placeholder="https://steamcommunity.com/id/yourname" value="<%= user.steam_profile_url || '' %>" />
+        </label>
+        <label>
+          Steam ID (optional)
+          <input type="text" name="steam_id" placeholder="7656119..." value="<%= user.steam_id || '' %>" />
+        </label>
+        <div class="settings-actions">
+          <button class="button ghost" type="submit">
+            <%= user.steam_profile_url || user.steam_id ? 'Update Steam' : 'Link Steam' %>
+          </button>
+        </div>
+      </form>
+    </div>
+
     <form class="form-card settings-card" method="POST" action="/settings">
       <input type="hidden" name="action" value="notifications" />
       <h3>Notifications</h3>
