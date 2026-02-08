@@ -112,6 +112,8 @@ async function ensureUserAuthColumns() {
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_id TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_profile_url TEXT');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_url TEXT');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_color TEXT');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique ON users (google_id)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique ON users (google_email)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_steam_id_unique ON users (steam_id)');
@@ -417,13 +419,13 @@ async function getProfilePayload(userId) {
     [userId]
   );
   const listingCount = Number(listingRows[0].count);
-  const { rows: orderRows } = await query('SELECT COUNT(*) as count FROM orders WHERE buyer_id = $1', [userId]);
-  const orderCount = Number(orderRows[0].count);
+  const { rows: salesRows } = await query('SELECT COUNT(*) as count FROM orders WHERE seller_id = $1', [userId]);
+  const salesCount = Number(salesRows[0].count);
   const { rows: listings } = await query(
     'SELECT * FROM listings WHERE seller_id = $1 ORDER BY created_at DESC LIMIT 6',
     [userId]
   );
-  return { user, listingCount, orderCount, listings };
+  return { user, listingCount, salesCount, listings };
 }
 
 async function getSettingsPayload(userId) {
@@ -1471,11 +1473,11 @@ app.get(
   '/profile',
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { user, listingCount, orderCount, listings } = await getProfilePayload(res.locals.currentUser.id);
+    const { user, listingCount, salesCount, listings } = await getProfilePayload(res.locals.currentUser.id);
     res.render('pages/profile', {
       user,
       listingCount,
-      orderCount,
+      salesCount,
       listings,
       formatPrice,
       error: null,

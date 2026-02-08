@@ -342,6 +342,29 @@ img {
   box-shadow: var(--shadow-md);
 }
 
+.profile-header-section.profile-preview {
+  margin-bottom: 1.5rem;
+}
+
+.profile-header-section.profile-preview .profile-banner {
+  height: 110px;
+}
+
+.profile-header-section.profile-preview .profile-header-content {
+  padding: 0 1.5rem 1.5rem;
+  margin-top: -40px;
+}
+
+.profile-header-section.profile-preview .profile-avatar-large {
+  width: 90px;
+  height: 90px;
+  font-size: 2.25rem;
+}
+
+.profile-header-section.profile-preview .profile-display-name {
+  font-size: 1.5rem;
+}
+
 .profile-banner {
   width: 100%;
   height: 140px;
