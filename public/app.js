@@ -50,6 +50,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInputs = document.querySelectorAll('input[type="file"]');
   fileInputs.forEach(input => {
     input.addEventListener('change', (e) => {
+      if (input.name === 'avatar') {
+        const clearAvatarInput = document.querySelector('input[name="clear_avatar"]');
+        if (clearAvatarInput) {
+          clearAvatarInput.value = 'false';
+        }
+      }
+      if (input.name === 'background') {
+        const clearBackgroundInput = document.querySelector('input[name="clear_background"]');
+        if (clearBackgroundInput) {
+          clearBackgroundInput.value = 'false';
+        }
+      }
       const file = e.target.files[0];
       if (file && file.type.startsWith('image/')) {
         const reader = new FileReader();
@@ -67,6 +79,65 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  const profilePreview = document.querySelector('.profile-header-section.profile-preview');
+  if (profilePreview) {
+    const previewInitial = profilePreview.dataset.initial || '';
+    const banner = profilePreview.querySelector('.profile-banner');
+    const avatarContainer = profilePreview.querySelector('.profile-avatar-large');
+    const clearButtons = profilePreview.querySelectorAll('.preview-clear');
+    const avatarInput = document.querySelector('input[name="avatar"]');
+    const backgroundInput = document.querySelector('input[name="background"]');
+    const backgroundColorInput = document.querySelector('input[name="profile_background_color"]');
+    const clearAvatarInput = document.querySelector('input[name="clear_avatar"]');
+    const clearBackgroundInput = document.querySelector('input[name="clear_background"]');
+
+    clearButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const type = button.dataset.clear;
+        if (type === 'avatar') {
+          if (clearAvatarInput) {
+            clearAvatarInput.value = 'true';
+          }
+          if (avatarInput) {
+            avatarInput.value = '';
+          }
+          const existingImage = avatarContainer?.querySelector('img');
+          if (existingImage) {
+            existingImage.remove();
+          }
+          if (avatarContainer && !avatarContainer.querySelector('span')) {
+            const initialSpan = document.createElement('span');
+            initialSpan.textContent = previewInitial || '?';
+            avatarContainer.prepend(initialSpan);
+          }
+        }
+
+        if (type === 'background') {
+          if (clearBackgroundInput) {
+            clearBackgroundInput.value = 'true';
+          }
+          if (backgroundInput) {
+            backgroundInput.value = '';
+          }
+          if (backgroundColorInput) {
+            backgroundColorInput.value = '';
+          }
+          if (banner) {
+            banner.removeAttribute('style');
+          }
+        }
+      });
+    });
+
+    if (backgroundColorInput) {
+      backgroundColorInput.addEventListener('input', () => {
+        if (clearBackgroundInput) {
+          clearBackgroundInput.value = 'false';
+        }
+      });
+    }
+  }
 
   // Auto-resize textareas
   const textareas = document.querySelectorAll('textarea');

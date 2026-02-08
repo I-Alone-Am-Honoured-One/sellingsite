@@ -24,8 +24,10 @@
       <% if (user.profile_background_color) { %>
         <% previewStyles.push(`background-color: ${user.profile_background_color}`); %>
       <% } %>
-      <div class="profile-header-section profile-preview">
-        <div class="profile-banner" style="<%= previewStyles.join('; ') %>"></div>
+      <div class="profile-header-section profile-preview" data-initial="<%= user.username.slice(0, 1).toUpperCase() %>">
+        <div class="profile-banner" style="<%= previewStyles.join('; ') %>">
+          <button class="preview-clear preview-clear-banner" type="button" data-clear="background" aria-label="Reset background">×</button>
+        </div>
         <div class="profile-header-content">
           <div class="profile-avatar-wrapper">
             <div class="profile-avatar-large">
@@ -34,6 +36,7 @@
               <% } else { %>
                 <span><%= user.username.slice(0, 1).toUpperCase() %></span>
               <% } %>
+              <button class="preview-clear preview-clear-avatar" type="button" data-clear="avatar" aria-label="Reset avatar">×</button>
             </div>
           </div>
           <div class="profile-info-section">
@@ -44,13 +47,6 @@
         </div>
       </div>
       <div class="profile-editor">
-        <div class="profile-avatar small">
-          <% if (user.avatar_url) { %>
-            <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
-          <% } else { %>
-            <span><%= user.username.slice(0, 1).toUpperCase() %></span>
-          <% } %>
-        </div>
         <div class="profile-editor-fields">
           <label>
             Username
@@ -63,6 +59,8 @@
           </label>
         </div>
       </div>
+      <input type="hidden" name="clear_avatar" value="false" />
+      <input type="hidden" name="clear_background" value="false" />
       <label>
         Avatar image
         <input class="file-input" type="file" name="avatar" accept="image/*" />

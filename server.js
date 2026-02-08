@@ -1540,9 +1540,12 @@ app.post(
       }
     }
 
-    let avatarUrl = currentProfile.avatar_url || null;
+    const clearAvatar = req.body.clear_avatar === 'true';
+    const clearBackground = req.body.clear_background === 'true';
+
+    let avatarUrl = clearAvatar ? null : currentProfile.avatar_url || null;
     const avatarFile = req.files?.avatar?.[0];
-    if (!error && avatarFile) {
+    if (!error && avatarFile && !clearAvatar) {
       try {
         avatarUrl = await uploadImage(avatarFile);
       } catch (uploadError) {
@@ -1550,9 +1553,9 @@ app.post(
       }
     }
 
-    let backgroundUrl = currentProfile.profile_background_url || null;
+    let backgroundUrl = clearBackground ? null : currentProfile.profile_background_url || null;
     const backgroundFile = req.files?.background?.[0];
-    if (!error && backgroundFile) {
+    if (!error && backgroundFile && !clearBackground) {
       try {
         backgroundUrl = await uploadImage(backgroundFile);
       } catch (uploadError) {
@@ -1560,7 +1563,7 @@ app.post(
       }
     }
 
-    const backgroundColorValue = profileBackgroundColor || null;
+    const backgroundColorValue = clearBackground ? null : profileBackgroundColor || null;
 
     if (!error) {
       await query(
