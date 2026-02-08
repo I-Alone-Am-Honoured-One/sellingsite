@@ -107,7 +107,6 @@ img {
   min-height: calc(100vh - var(--header-height) - 200px);
 }
 
-
 /* ==================== IMPROVED HEADER ==================== */
 .site-header {
   position: sticky;

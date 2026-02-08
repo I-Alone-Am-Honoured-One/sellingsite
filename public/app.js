@@ -1,5 +1,10 @@
 // Profile menu dropdown handling
 document.addEventListener('DOMContentLoaded', () => {
+  const legacyOverlays = document.querySelectorAll(
+    '.site-intro, .intro-overlay, .loading-overlay, .booting-overlay'
+  );
+  legacyOverlays.forEach(overlay => overlay.remove());
+
   // Desktop profile menu
   const profileMenus = document.querySelectorAll('.profile-menu');
   profileMenus.forEach(menu => {
@@ -215,26 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
         alert.remove();
       }, 300);
     }, 5000);
-  });
-
-  // Add loading state to buttons on form submit
-  forms.forEach(form => {
-    form.addEventListener('submit', (e) => {
-      const submitButton = form.querySelector('button[type="submit"]');
-      if (submitButton && !submitButton.disabled) {
-        submitButton.disabled = true;
-        const originalText = submitButton.textContent;
-        submitButton.textContent = 'Loading...';
-        submitButton.style.opacity = '0.7';
-        
-        // Re-enable after 3 seconds as a fallback
-        setTimeout(() => {
-          submitButton.disabled = false;
-          submitButton.textContent = originalText;
-          submitButton.style.opacity = '1';
-        }, 3000);
-      }
-    });
   });
 
   // Smooth scroll for anchor links
