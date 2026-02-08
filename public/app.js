@@ -88,80 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existing) {
       existing.remove();
     }
-
-    const preview = document.createElement('div');
-    preview.className = 'upload-preview';
-    preview.dataset.previewType = input.name;
-
-    const header = document.createElement('div');
-    header.className = 'upload-preview-header';
-    header.innerHTML = `
-      <div>
-        <p class="upload-preview-title">Preview</p>
-        <p class="upload-preview-subtitle">${input.name === 'background' ? 'Banner crop (3:1)' : 'Avatar crop (1:1)'}</p>
-      </div>
-      <span class="upload-preview-badge">${input.name === 'background' ? 'Banner' : 'Avatar'}</span>
+    preview.innerHTML = `
+      <img src="${previewUrl}" alt="Preview" loading="lazy" />
     `;
-
-    const media = document.createElement('div');
-    media.className = 'upload-preview-media';
-    const img = document.createElement('img');
-    img.src = previewUrl;
-    img.alt = 'Preview';
-    img.loading = 'lazy';
-    img.draggable = false;
-    media.appendChild(img);
-
-    const meta = document.createElement('div');
-    meta.className = 'upload-preview-meta';
-    meta.innerHTML = `
-      <div class="upload-preview-chip">Auto-updated after crop</div>
-      <div class="upload-preview-chip">Full-width preview</div>
-    `;
-
-    const grid = document.createElement('div');
-    grid.className = 'upload-preview-grid';
-    const gridItems = [
-      { label: 'Aspect ratio', value: input.name === 'background' ? '3:1 wide' : '1:1 square' },
-      { label: 'Best for', value: input.name === 'background' ? 'Profile banner' : 'Avatar' },
-      { label: 'Positioning', value: 'Drag to align' },
-      { label: 'Zoom', value: 'Pinch/scroll' }
-    ];
-    gridItems.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'upload-preview-grid-item';
-      card.innerHTML = `<span>${item.label}</span><strong>${item.value}</strong>`;
-      grid.appendChild(card);
-    });
-
-    const data = document.createElement('div');
-    data.className = 'upload-preview-data';
-    data.innerHTML = `
-      <div class="upload-preview-data-item upload-preview-highlight"><strong>Tip:</strong> Keep faces centered.</div>
-      <div class="upload-preview-data-item">Safe area shown in crop frame.</div>
-      <div class="upload-preview-data-item">Preview scales to card width.</div>
-    `;
-
-    const rail = document.createElement('div');
-    rail.className = 'upload-preview-rail';
-    rail.innerHTML = '<span></span>';
-
-    const actions = document.createElement('div');
-    actions.className = 'upload-preview-actions';
-    actions.innerHTML = `
-      <span class="upload-preview-action primary">Live preview</span>
-      <span class="upload-preview-action">Responsive width</span>
-      <span class="upload-preview-action">Cropped output</span>
-    `;
-
-    preview.appendChild(header);
-    preview.appendChild(media);
-    preview.appendChild(meta);
-    preview.appendChild(grid);
-    preview.appendChild(data);
-    preview.appendChild(rail);
-    preview.appendChild(actions);
-    input.parentElement.appendChild(preview);
   };
 
   const setProfilePreviewImage = (input, previewUrl) => {
@@ -221,8 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
       this.resizeObserver = null;
 
       this.bindEvents();
-      this.setTipVisibility();
-      this.disableNativeDrag();
     }
 
     createModal() {
@@ -292,22 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       window.addEventListener('resize', () => this.handleResize());
       window.addEventListener('orientationchange', () => this.handleResize());
-    }
-
-    disableNativeDrag() {
-      if (this.image) {
-        this.image.setAttribute('draggable', 'false');
-        this.image.addEventListener('dragstart', (e) => e.preventDefault());
-      }
-      if (this.frame) {
-        this.frame.addEventListener('dragstart', (e) => e.preventDefault());
-      }
-    }
-
-    setTipVisibility() {
-      if (!this.tipLabel) return;
-      const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
-      this.tipLabel.hidden = !isTouchDevice;
     }
 
     handleResize() {
@@ -584,11 +495,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onPointerDown(e) {
       if (!this.activeCrop) return;
-      if (e.pointerType === 'touch' && this.activePointers.size > 1) return;
-      if (e.pointerType !== 'touch') {
-        this.activePointers.clear();
-      }
-      e.preventDefault();
       this.isDragging = true;
       this.image.classList.add('is-dragging');
       this.image.setPointerCapture(e.pointerId);
@@ -618,20 +524,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     onFramePointerDown(e) {
-      if (!this.activeCrop) return;
-      if (e.pointerType === 'touch') {
-        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      } else {
-        this.activePointers.clear();
-      }
-      e.preventDefault();
+      if (!this.activeCrop || e.pointerType !== 'touch') return;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       this.frame.setPointerCapture(e.pointerId);
-      if (this.activePointers.size === 1) {
-        this.isDragging = true;
-        this.image.classList.add('is-dragging');
-        this.dragStart = { x: e.clientX, y: e.clientY };
-        this.dragOrigin = { x: this.activeCrop.translateX, y: this.activeCrop.translateY };
-      }
       if (this.activePointers.size === 2) {
         const [first, second] = Array.from(this.activePointers.values());
         const distance = getDistance(first, second);
@@ -639,36 +534,12 @@ document.addEventListener('DOMContentLoaded', () => {
         this.isDragging = false;
         this.image.classList.remove('is-dragging');
       }
-      if (e.pointerType !== 'touch') {
-        this.isDragging = true;
-        this.image.classList.add('is-dragging');
-        this.dragStart = { x: e.clientX, y: e.clientY };
-        this.dragOrigin = { x: this.activeCrop.translateX, y: this.activeCrop.translateY };
-      }
     }
 
     onFramePointerMove(e) {
-      if (!this.activeCrop) return;
-      if (e.pointerType === 'touch') {
-        if (!this.activePointers.has(e.pointerId)) return;
-        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      }
-      if (e.pointerType !== 'touch' && this.isDragging) {
-        const deltaX = e.clientX - this.dragStart.x;
-        const deltaY = e.clientY - this.dragStart.y;
-        this.activeCrop.translateX = this.dragOrigin.x + deltaX;
-        this.activeCrop.translateY = this.dragOrigin.y + deltaY;
-        this.updateCropTransform();
-        return;
-      }
-      if (this.activePointers.size === 1 && this.isDragging) {
-        const deltaX = e.clientX - this.dragStart.x;
-        const deltaY = e.clientY - this.dragStart.y;
-        this.activeCrop.translateX = this.dragOrigin.x + deltaX;
-        this.activeCrop.translateY = this.dragOrigin.y + deltaY;
-        this.updateCropTransform();
-        return;
-      }
+      if (!this.activeCrop || e.pointerType !== 'touch') return;
+      if (!this.activePointers.has(e.pointerId)) return;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.activePointers.size !== 2 || !this.pinchState) return;
 
       const [first, second] = Array.from(this.activePointers.values());
@@ -679,19 +550,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     onFramePointerUp(e) {
-      if (e.pointerType === 'touch') {
-        this.activePointers.delete(e.pointerId);
-        if (this.activePointers.size < 2) {
-          this.pinchState = null;
-        }
-        if (this.activePointers.size === 0) {
-          this.isDragging = false;
-          this.image.classList.remove('is-dragging');
-        }
-        return;
+      if (e.pointerType !== 'touch') return;
+      this.activePointers.delete(e.pointerId);
+      if (this.activePointers.size < 2) {
+        this.pinchState = null;
       }
-      this.isDragging = false;
-      this.image.classList.remove('is-dragging');
     }
 
     onWheelZoom(e) {
