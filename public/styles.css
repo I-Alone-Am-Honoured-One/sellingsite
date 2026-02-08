@@ -351,15 +351,6 @@ img {
   --preview-padding-x: clamp(1.5rem, 3vw, 2.5rem);
 }
 
-@media (min-width: 1024px) {
-  .profile-header-section.profile-preview {
-    max-width: 100%;
-    --preview-banner-height: clamp(210px, 20vw, 260px);
-    --preview-avatar-size: clamp(160px, 16vw, 200px);
-    --preview-overlap: clamp(48px, 5vw, 70px);
-  }
-}
-
 .profile-header-section.profile-preview .profile-banner {
   height: var(--preview-banner-height);
 }
@@ -428,12 +419,10 @@ img {
   margin-top: 1rem;
   display: grid;
   justify-items: start;
-  width: 100%;
 }
 
 .image-preview img {
-  width: 100%;
-  max-width: 100%;
+  width: min(360px, 100%);
   max-height: 360px;
   border-radius: 1rem;
   box-shadow: var(--shadow-md);
@@ -441,17 +430,6 @@ img {
   background: var(--card-alt);
 }
 
-.image-preview.is-banner img {
-  width: 100%;
-  max-height: 240px;
-  aspect-ratio: 3 / 1;
-}
-
-.image-preview.is-avatar img {
-  width: min(360px, 100%);
-  max-height: 320px;
-  border-radius: 50%;
-}
 .image-crop-modal {
   position: fixed;
   inset: 0;
@@ -600,18 +578,6 @@ img {
 
 .image-crop-tip {
   font-style: italic;
-}
-
-@media (pointer: fine) {
-  .image-crop-controls {
-    display: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .image-crop-tip {
-    display: none;
-  }
 }
 
 .image-crop-actions {
