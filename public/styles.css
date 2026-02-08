@@ -2296,6 +2296,15 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .profile-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-avatar.small {
+    width: 90px;
+    height: 90px;
+  }
+
   .button {
     width: 100%;
     padding: 0.75rem 1.25rem;
