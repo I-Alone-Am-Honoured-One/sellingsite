@@ -74,9 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="image-crop-frame">
           <img class="image-crop-image" alt="Crop preview" />
-          <div class="image-crop-grid">
-            ${'<span></span>'.repeat(9)}
-          </div>
+          <div class="image-crop-mask" aria-hidden="true"></div>
         </div>
         <div class="image-crop-controls">
           <label>
@@ -175,6 +173,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const previewUrl = reader.result;
       cropImage.src = previewUrl;
       cropModal.hidden = false;
+      cropFrame.classList.toggle('is-circle', input.name === 'avatar');
+      cropFrame.classList.toggle('is-banner', input.name === 'background');
 
       const frameWidth = cropFrame.clientWidth;
       const frameHeight = frameWidth / aspect;
