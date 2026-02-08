@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
@@ -392,7 +391,9 @@ async function uploadImage(file) {
     return null;
   }
   if (!isCloudinaryConfigured) {
-    return `/uploads/${file.filename}`;
+    const error = new Error('Cloudinary is not configured for uploads.');
+    error.status = 500;
+    throw error;
   }
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
