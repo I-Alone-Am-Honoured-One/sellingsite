@@ -84,11 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const setPreviewImage = (input, previewUrl) => {
-    let preview = input.parentElement.querySelector('.image-preview');
-    if (!preview) {
-      preview = document.createElement('div');
-      preview.className = 'image-preview';
-      input.parentElement.appendChild(preview);
+    const existing = input.parentElement.querySelector('.upload-preview');
+    if (existing) {
+      existing.remove();
     }
     preview.innerHTML = `
       <img src="${previewUrl}" alt="Preview" loading="lazy" />
