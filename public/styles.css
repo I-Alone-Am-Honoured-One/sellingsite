@@ -347,6 +347,8 @@ img {
   height: 140px;
   background: var(--gradient-1);
   position: relative;
+  background-size: cover;
+  background-position: center;
 }
 
 .profile-header-content {
@@ -356,6 +358,8 @@ img {
 
 .profile-avatar-wrapper {
   margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .profile-avatar-large {
@@ -401,9 +405,18 @@ img {
   line-height: 1.2;
 }
 
-.profile-email {
+.profile-steam {
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+.profile-steam a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.profile-steam a:hover {
+  color: var(--primary-dark);
 }
 
 .profile-joined-date {
@@ -2410,6 +2423,10 @@ textarea {
     width: 90px;
     height: 90px;
     font-size: 2.25rem;
+  }
+
+  .profile-banner {
+    height: 120px;
   }
 
   .stat-number {

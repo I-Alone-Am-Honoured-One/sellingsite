@@ -8,8 +8,15 @@
   <% } %>
 
   <!-- Main Profile Section -->
+  <% const bannerStyles = []; %>
+  <% if (user.profile_background_url) { %>
+    <% bannerStyles.push(`background-image: url('${user.profile_background_url}')`); %>
+  <% } %>
+  <% if (user.profile_background_color) { %>
+    <% bannerStyles.push(`background-color: ${user.profile_background_color}`); %>
+  <% } %>
   <div class="profile-header-section">
-    <div class="profile-banner"></div>
+    <div class="profile-banner" style="<%= bannerStyles.join('; ') %>"></div>
     <div class="profile-header-content">
       <div class="profile-avatar-wrapper">
         <div class="profile-avatar-large">
@@ -27,7 +34,16 @@
           <a class="button primary compact" href="/settings">Edit Profile</a>
         </div>
         
-        <p class="profile-email"><%= user.email %></p>
+        <% if (user.steam_profile_url || user.steam_id) { %>
+          <p class="profile-steam">
+            Steam:
+            <% if (user.steam_profile_url) { %>
+              <a href="<%= user.steam_profile_url %>" target="_blank" rel="noreferrer">View profile</a>
+            <% } else { %>
+              <span><%= user.steam_id %></span>
+            <% } %>
+          </p>
+        <% } %>
         
         <% const joinedDate = user.created_at ? new Date(user.created_at) : null; %>
         <p class="profile-joined-date">

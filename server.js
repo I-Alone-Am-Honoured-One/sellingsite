@@ -69,6 +69,10 @@ const upload = multer({
 
 const uploadListingImage = upload.single('image');
 const uploadAvatarImage = upload.single('avatar');
+const uploadSettingsImages = upload.fields([
+  { name: 'avatar', maxCount: 1 },
+  { name: 'background', maxCount: 1 }
+]);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -1499,7 +1503,7 @@ app.post(
   '/settings/profile',
   requireAuth,
   (req, res, next) => {
-    uploadAvatarImage(req, res, async (error) => {
+    uploadSettingsImages(req, res, async (error) => {
       if (!error) {
         return next();
       }
@@ -1512,8 +1516,15 @@ app.post(
   asyncHandler(async (req, res) => {
     const username = (req.body.username || '').trim();
     const bio = (req.body.bio || '').trim();
+    const profileBackgroundColor = (req.body.profile_background_color || '').trim();
     let error = null;
     let success = null;
+
+    const { rows: currentRows } = await query(
+      'SELECT avatar_url, profile_background_url, profile_background_color FROM users WHERE id = $1',
+      [res.locals.currentUser.id]
+    );
+    const currentProfile = currentRows[0] || {};
 
     if (!username) {
       error = 'Username is required.';
@@ -1527,36 +1538,45 @@ app.post(
       }
     }
 
-    let avatarUrl = null;
-    if (!error && req.file) {
+    let avatarUrl = currentProfile.avatar_url || null;
+    const avatarFile = req.files?.avatar?.[0];
+    if (!error && avatarFile) {
       try {
-        avatarUrl = await uploadImage(req.file);
+        avatarUrl = await uploadImage(avatarFile);
       } catch (uploadError) {
         error = 'Avatar upload failed. Please try again.';
       }
     }
 
-    if (!error) {
-      if (avatarUrl) {
-        await query('UPDATE users SET username = $1, bio = $2, avatar_url = $3 WHERE id = $4', [
-          username,
-          bio,
-          avatarUrl,
-          res.locals.currentUser.id
-        ]);
-      } else {
-        await query('UPDATE users SET username = $1, bio = $2 WHERE id = $3', [
-          username,
-          bio,
-          res.locals.currentUser.id
-        ]);
+    let backgroundUrl = currentProfile.profile_background_url || null;
+    const backgroundFile = req.files?.background?.[0];
+    if (!error && backgroundFile) {
+      try {
+        backgroundUrl = await uploadImage(backgroundFile);
+      } catch (uploadError) {
+        error = 'Background upload failed. Please try again.';
       }
+    }
+
+    const backgroundColorValue = profileBackgroundColor || null;
+
+    if (!error) {
+      await query(
+        `UPDATE users
+         SET username = $1,
+             bio = $2,
+             avatar_url = $3,
+             profile_background_url = $4,
+             profile_background_color = $5
+         WHERE id = $6`,
+        [username, bio, avatarUrl, backgroundUrl, backgroundColorValue, res.locals.currentUser.id]
+      );
       if (res.locals.currentUser) {
         res.locals.currentUser.username = username;
         res.locals.currentUser.bio = bio;
-        if (avatarUrl) {
-          res.locals.currentUser.avatar_url = avatarUrl;
-        }
+        res.locals.currentUser.avatar_url = avatarUrl;
+        res.locals.currentUser.profile_background_url = backgroundUrl;
+        res.locals.currentUser.profile_background_color = backgroundColorValue;
       }
       success = 'Profile updated successfully.';
     }
@@ -1598,17 +1618,7 @@ app.post(
     }
 
     if (action === 'email') {
-      const email = (req.body.email || '').trim().toLowerCase();
-      if (!email || !isValidEmail(email)) {
-        error = 'Please enter a valid email.';
-      } else {
-        try {
-          await query('UPDATE users SET email = $1 WHERE id = $2', [email, res.locals.currentUser.id]);
-          success = 'Email updated successfully.';
-        } catch (updateError) {
-          error = 'That email is already in use.';
-        }
-      }
+      error = 'Email updates are currently disabled. Contact support if you need help.';
     }
 
     if (action === 'notifications') {
