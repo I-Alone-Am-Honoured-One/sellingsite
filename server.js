@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const cookieParser = require('cookie-parser');
@@ -25,16 +26,17 @@ const OAUTH_STATE_COOKIE = 'oauth_state';
 const OAUTH_ACTION_COOKIE = 'oauth_action';
 const OAUTH_LINK_COOKIE = 'oauth_link';
 
+const cloudinaryConfig = {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+};
 const isCloudinaryConfigured = Boolean(
-  process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET
+  cloudinaryConfig.cloud_name && cloudinaryConfig.api_key && cloudinaryConfig.api_secret
 );
 
 if (isCloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-  });
+  cloudinary.config(cloudinaryConfig);
 }
 
 const uploadDir = process.env.UPLOAD_DIR
@@ -44,7 +46,8 @@ if (!isCloudinaryConfigured && !fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage = isCloudinaryConfigured
+const isProduction = process.env.NODE_ENV === 'production';
+const storage = isCloudinaryConfigured || isProduction
   ? multer.memoryStorage()
   : multer.diskStorage({
       destination: uploadDir,
@@ -391,8 +394,11 @@ async function uploadImage(file) {
     return null;
   }
   if (!isCloudinaryConfigured) {
-    const error = new Error('Cloudinary is not configured for uploads.');
+    const error = new Error(
+      'Cloudinary is not configured for uploads. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.'
+    );
     error.status = 500;
+    console.error('Cloudinary configuration error:', error.message);
     throw error;
   }
   return new Promise((resolve, reject) => {
@@ -400,6 +406,7 @@ async function uploadImage(file) {
       { folder: 'safeswap', resource_type: 'image' },
       (error, result) => {
         if (error) {
+          console.error('Cloudinary upload failed:', error);
           return reject(error);
         }
         return resolve(result.secure_url);
@@ -1730,7 +1737,7 @@ app.post(
       try {
         avatarUrl = await uploadImage(avatarFile);
       } catch (uploadError) {
-        error = 'Avatar upload failed. Please try again.';
+        error = uploadError.message || 'Avatar upload failed. Please try again.';
       }
     }
 
@@ -1740,7 +1747,7 @@ app.post(
       try {
         backgroundUrl = await uploadImage(backgroundFile);
       } catch (uploadError) {
-        error = 'Background upload failed. Please try again.';
+        error = uploadError.message || 'Background upload failed. Please try again.';
       }
     }
 
