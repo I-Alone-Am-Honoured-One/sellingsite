@@ -12,6 +12,7 @@
       <h1><%= listing.title %></h1>
       <p class="price large"><%= formatPrice(listing.price_cents) %></p>
       <p class="meta">Listed by <%= listing.seller_name %></p>
+      <p class="meta">Favorited by <%= favoriteCount %> shoppers</p>
       <p class="description"><%= listing.description %></p>
       <div class="info-box">
         <h4>Buyer protection</h4>
@@ -30,6 +31,11 @@
               <input type="hidden" name="listing_id" value="<%= listing.id %>" />
               <input type="text" name="body" placeholder="Ask the seller a question..." required />
               <button class="button ghost" type="submit">Message seller</button>
+            </form>
+            <form method="POST" action="/listings/<%= listing.id %>/favorite">
+              <button class="button <%= isFavorited ? 'primary' : 'ghost' %> favorite-toggle" type="submit">
+                <%= isFavorited ? '★ Favorited' : '☆ Add to favorites' %>
+              </button>
             </form>
           <% } %>
         <% } else { %>
