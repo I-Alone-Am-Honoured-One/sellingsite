@@ -7,6 +7,12 @@ CREATE TABLE IF NOT EXISTS users (
   bio TEXT,
   notification_enabled BOOLEAN DEFAULT TRUE,
   marketing_enabled BOOLEAN DEFAULT FALSE,
+  google_id TEXT UNIQUE,
+  google_email TEXT UNIQUE,
+  steam_id TEXT UNIQUE,
+  steam_profile_url TEXT,
+  profile_background_url TEXT,
+  profile_background_color TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -71,5 +77,20 @@ CREATE TABLE IF NOT EXISTS sessions (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL UNIQUE,
   expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS chess_invites (
+  id SERIAL PRIMARY KEY,
+  inviter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  invitee_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS chess_matches (
+  id SERIAL PRIMARY KEY,
+  white_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  black_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

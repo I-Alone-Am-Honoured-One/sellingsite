@@ -17,21 +17,35 @@
   <div class="settings-grid">
     <form class="form-card settings-card" method="POST" action="/settings/profile" enctype="multipart/form-data">
       <h3>Account profile</h3>
-      <div class="profile-avatar">
-        <% if (user.avatar_url) { %>
-          <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
-        <% } else { %>
-          <span><%= user.username.slice(0, 1).toUpperCase() %></span>
-        <% } %>
+      <div class="profile-editor">
+        <div class="profile-avatar small">
+          <% if (user.avatar_url) { %>
+            <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
+          <% } else { %>
+            <span><%= user.username.slice(0, 1).toUpperCase() %></span>
+          <% } %>
+        </div>
+        <div class="profile-editor-fields">
+          <label>
+            Username
+            <input type="text" name="username" value="<%= user.username %>" required />
+            <span class="helper">Usernames must be unique.</span>
+          </label>
+          <label>
+            Bio
+            <textarea name="bio" rows="4" placeholder="Tell the community about yourself."><%= user.bio || '' %></textarea>
+          </label>
+        </div>
       </div>
       <label>
-        Username
-        <input type="text" name="username" value="<%= user.username %>" required />
-        <span class="helper">Usernames must be unique.</span>
+        Profile background color
+        <input type="color" name="profile_background_color" value="<%= user.profile_background_color || '#5b5df6' %>" />
+        <span class="helper">Pick a color for your profile banner.</span>
       </label>
       <label>
-        Bio
-        <textarea name="bio" rows="4" placeholder="Tell the community about yourself."><%= user.bio || '' %></textarea>
+        Profile background image
+        <input class="file-input" type="file" name="background" accept="image/*" />
+        <span class="helper">Upload an optional banner image.</span>
       </label>
       <label>
         Avatar image
@@ -63,17 +77,48 @@
       </div>
     </form>
 
-    <form class="form-card settings-card" method="POST" action="/settings">
-      <input type="hidden" name="action" value="email" />
-      <h3>Update email</h3>
-      <label>
-        Email address
-        <input type="email" name="email" value="<%= user.email %>" required />
-      </label>
-      <div class="settings-actions">
-        <button class="button ghost" type="submit">Save email</button>
+    <div class="form-card settings-card">
+      <h3>Connected accounts</h3>
+      <p class="muted">Link external accounts for faster sign-in and sharing.</p>
+      <div class="linked-account">
+        <div>
+          <strong>Google</strong>
+          <p class="muted">
+            <%= user.google_email ? `Linked as ${user.google_email}` : 'Not linked yet.' %>
+          </p>
+        </div>
+        <div class="linked-actions">
+          <% if (user.google_id) { %>
+            <form method="POST" action="/settings">
+              <input type="hidden" name="action" value="unlink_google" />
+              <button class="button ghost small" type="submit">Unlink</button>
+            </form>
+          <% } else { %>
+            <a class="button primary small" href="/auth/google?action=link">Connect Google</a>
+          <% } %>
+        </div>
       </div>
-    </form>
+      <form class="linked-account-form" method="POST" action="/settings">
+        <input type="hidden" name="action" value="steam" />
+        <div>
+          <strong>Steam</strong>
+          <p class="muted">Add a Steam profile link to show your gaming identity.</p>
+        </div>
+        <label>
+          Steam profile URL
+          <input type="url" name="steam_profile_url" placeholder="https://steamcommunity.com/id/yourname" value="<%= user.steam_profile_url || '' %>" />
+        </label>
+        <label>
+          Steam ID (optional)
+          <input type="text" name="steam_id" placeholder="7656119..." value="<%= user.steam_id || '' %>" />
+        </label>
+        <div class="settings-actions">
+          <button class="button ghost" type="submit">
+            <%= user.steam_profile_url || user.steam_id ? 'Update Steam' : 'Link Steam' %>
+          </button>
+        </div>
+      </form>
+    </div>
 
     <form class="form-card settings-card" method="POST" action="/settings">
       <input type="hidden" name="action" value="notifications" />
