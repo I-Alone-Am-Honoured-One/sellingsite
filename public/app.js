@@ -74,7 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="image-crop-frame">
           <img class="image-crop-image" alt="Crop preview" />
-          <div class="image-crop-grid"></div>
+          <div class="image-crop-grid">
+            ${'<span></span>'.repeat(9)}
+          </div>
         </div>
         <div class="image-crop-controls">
           <label>

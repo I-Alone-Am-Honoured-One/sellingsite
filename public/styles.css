@@ -465,7 +465,7 @@ img {
 }
 
 .profile-header-section.profile-preview .profile-banner {
-  height: 90px;
+  height: 100px;
 }
 
 .profile-header-section.profile-preview .profile-header-content {
@@ -485,7 +485,7 @@ img {
 
 .profile-banner {
   width: 100%;
-  height: 110px;
+  height: 120px;
   background: var(--gradient-1);
   position: relative;
   background-size: cover;
@@ -591,11 +591,22 @@ img {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(to right, rgba(248, 250, 252, 0.35) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(248, 250, 252, 0.35) 1px, transparent 1px);
-  background-size: calc(100% / 3) 100%, 100% calc(100% / 3);
-  background-position: 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.image-crop-grid span {
+  border-right: 1px solid rgba(248, 250, 252, 0.35);
+  border-bottom: 1px solid rgba(248, 250, 252, 0.35);
+}
+
+.image-crop-grid span:nth-child(3n) {
+  border-right: none;
+}
+
+.image-crop-grid span:nth-last-child(-n + 3) {
+  border-bottom: none;
 }
 
 .image-crop-image {
