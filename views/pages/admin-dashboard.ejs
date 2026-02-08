@@ -22,25 +22,6 @@
           <h2>Accounts</h2>
           <p class="muted">Update credentials or remove accounts that violate policies.</p>
         </div>
-        <form class="admin-filters" method="GET" action="/dashboard">
-          <label>
-            Search by username or email
-            <input type="text" name="search" value="<%= userSearch || '' %>" placeholder="Search users" />
-          </label>
-          <label>
-            Filter
-            <select name="filter">
-              <option value="" <% if (!userFilter) { %>selected<% } %>>All users</option>
-              <option value="banned" <% if (userFilter === 'banned') { %>selected<% } %>>Banned</option>
-              <option value="verified" <% if (userFilter === 'verified') { %>selected<% } %>>Verified</option>
-              <option value="new" <% if (userFilter === 'new') { %>selected<% } %>>New (last 7 days)</option>
-            </select>
-          </label>
-          <div class="admin-actions">
-            <button class="button secondary small" type="submit">Apply</button>
-            <a class="button ghost small" href="/dashboard">Reset</a>
-          </div>
-        </form>
         <div class="admin-list">
           <% users.forEach((user) => { %>
             <% const isPrimaryAdmin = user.username === 'Admin' && user.email.toLowerCase() === 'mariusjon101@gmail.com'; %>
@@ -49,14 +30,6 @@
                 <div>
                   <h3><%= user.username %></h3>
                   <p class="muted"><%= user.email %></p>
-                  <div class="admin-status">
-                    <% if (user.verified) { %>
-                      <span class="status-pill verified">Verified</span>
-                    <% } %>
-                    <% if (user.banned) { %>
-                      <span class="status-pill banned">Banned</span>
-                    <% } %>
-                  </div>
                 </div>
                 <div class="admin-meta">
                   <span>Joined <%= new Date(user.created_at).toLocaleDateString() %></span>
@@ -75,22 +48,6 @@
                   <label>
                     New password
                     <input type="password" name="password" placeholder="Leave blank to keep current password" />
-                  </label>
-                  <label>
-                    Verification status
-                    <select name="verified_status">
-                      <option value="no-change">No change</option>
-                      <option value="verified">Mark verified</option>
-                      <option value="unverified">Mark unverified</option>
-                    </select>
-                  </label>
-                  <label>
-                    Ban status
-                    <select name="banned_status">
-                      <option value="no-change">No change</option>
-                      <option value="banned">Ban user</option>
-                      <option value="active">Mark active</option>
-                    </select>
                   </label>
                 </div>
                 <div class="admin-actions">
@@ -146,34 +103,6 @@
                     Delete listing
                   </button>
                 </form>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      </div>
-
-      <div class="form-card admin-card">
-        <div>
-          <h2>Audit trail</h2>
-          <p class="muted">Recent admin actions for accountability.</p>
-        </div>
-        <div class="audit-list">
-          <% if (!auditLogs.length) { %>
-            <p class="muted">No audit events recorded yet.</p>
-          <% } %>
-          <% auditLogs.forEach((log) => { %>
-            <div class="audit-item">
-              <div>
-                <strong><%= log.admin_username %></strong> <span class="muted"><%= log.action %></span>
-                <div class="muted">
-                  <%= log.target_type %> #<%= log.target_id || 'n/a' %>
-                </div>
-                <% if (log.details) { %>
-                  <div class="muted"><%= log.details %></div>
-                <% } %>
-              </div>
-              <div class="admin-meta">
-                <span><%= new Date(log.created_at).toLocaleString() %></span>
               </div>
             </div>
           <% }) %>

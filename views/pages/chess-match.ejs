@@ -8,8 +8,41 @@
     <a class="link" href="/chess">Back to chess lobby</a>
   </div>
 
-  <div class="chess-board-wrapper">
-    <div class="chess-board" id="chessBoard"></div>
+  <% const isWhite = match.white_player_id === currentUser.id; %>
+  <% const yourColor = isWhite ? 'White' : 'Black'; %>
+  <% const turnLabel = 'White to move'; %>
+
+  <div class="chess-match-layout">
+    <div class="chess-match-panel">
+      <div class="chess-status">
+        <div>
+          <span class="label">Opponent</span>
+          <p><strong><%= opponentName %></strong></p>
+        </div>
+        <div>
+          <span class="label">You are</span>
+          <p class="chess-chip <%= isWhite ? 'light' : 'dark' %>"><%= yourColor %></p>
+        </div>
+        <div>
+          <span class="label">Turn</span>
+          <p class="chess-chip neutral"><%= turnLabel %></p>
+        </div>
+      </div>
+      <div class="chess-legend">
+        <div class="legend-row">
+          <span class="legend-square light"></span>
+          <span class="muted">Light square</span>
+        </div>
+        <div class="legend-row">
+          <span class="legend-square dark"></span>
+          <span class="muted">Dark square</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chess-board-wrapper">
+      <div class="chess-board" id="chessBoard" role="grid" aria-label="Chess board"></div>
+    </div>
   </div>
 </section>
 
@@ -154,8 +187,9 @@
   }
 
   function clearHighlights() {
-    document.querySelectorAll('.chess-square.highlight').forEach((square) => {
+    document.querySelectorAll('.chess-square.highlight, .chess-square.selected').forEach((square) => {
       square.classList.remove('highlight');
+      square.classList.remove('selected');
     });
   }
 
@@ -163,6 +197,8 @@
     clearHighlights();
     const piece = boardState[row][col];
     if (!piece) return;
+    const currentSquare = document.querySelector(`.chess-square[data-row="${row}"][data-col="${col}"]`);
+    if (currentSquare) currentSquare.classList.add('selected');
     const moves = getMoves(row, col);
     moves.forEach(([r, c]) => {
       const selector = `.chess-square[data-row="${r}"][data-col="${c}"]`;

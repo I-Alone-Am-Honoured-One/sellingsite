@@ -473,58 +473,17 @@ async function getSettingsPayload(userId) {
   return { user, listings };
 }
 
-async function getAdminDashboardPayload({ userSearch, userFilter } = {}) {
-  const userFilters = [];
-  const userValues = [];
-
-  if (userSearch) {
-    userValues.push(`%${userSearch}%`);
-    userFilters.push(`(username ILIKE $${userValues.length} OR email ILIKE $${userValues.length})`);
-  }
-
-  if (userFilter === 'banned') {
-    userFilters.push('banned = true');
-  }
-  if (userFilter === 'verified') {
-    userFilters.push('verified = true');
-  }
-  if (userFilter === 'new') {
-    userFilters.push("created_at >= NOW() - INTERVAL '7 days'");
-  }
-
-  const userWhere = userFilters.length ? `WHERE ${userFilters.join(' AND ')}` : '';
+async function getAdminDashboardPayload() {
   const { rows: users } = await query(
-    `SELECT id, username, email, created_at, banned, verified
-     FROM users
-     ${userWhere}
-     ORDER BY created_at DESC`,
-    userValues
+    'SELECT id, username, email, created_at FROM users ORDER BY created_at DESC'
   );
-
   const { rows: listings } = await query(
     `SELECT listings.*, users.username AS seller_name
      FROM listings
      JOIN users ON listings.seller_id = users.id
      ORDER BY listings.created_at DESC`
   );
-
-  const { rows: auditLogs } = await query(
-    `SELECT admin_audit_logs.*, users.username AS admin_username
-     FROM admin_audit_logs
-     JOIN users ON admin_audit_logs.admin_id = users.id
-     ORDER BY admin_audit_logs.created_at DESC
-     LIMIT 25`
-  );
-
-  return { users, listings, auditLogs };
-}
-
-async function logAdminAction({ adminId, action, targetType, targetId, details }) {
-  await query(
-    `INSERT INTO admin_audit_logs (admin_id, action, target_type, target_id, details)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [adminId, action, targetType, targetId || null, details || null]
-  );
+  return { users, listings };
 }
 
 app.use(asyncHandler(async (req, res, next) => {
@@ -1774,19 +1733,8 @@ app.get(
   requireAuth,
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const userSearch = (req.query.search || '').trim();
-    const userFilter = (req.query.filter || '').trim();
-    const { users, listings, auditLogs } = await getAdminDashboardPayload({ userSearch, userFilter });
-    res.render('pages/admin-dashboard', {
-      users,
-      listings,
-      auditLogs,
-      userSearch,
-      userFilter,
-      formatPrice,
-      error: null,
-      success: null
-    });
+    const { users, listings } = await getAdminDashboardPayload();
+    res.render('pages/admin-dashboard', { users, listings, formatPrice, error: null, success: null });
   })
 );
 
@@ -1803,8 +1751,6 @@ app.post(
     const username = (req.body.username || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password || '';
-    const verifiedStatus = (req.body.verified_status || '').trim();
-    const bannedStatus = (req.body.banned_status || '').trim();
 
     let error = null;
     const updates = [];
@@ -1850,45 +1796,17 @@ app.post(
       }
     }
 
-    if (!error && verifiedStatus && verifiedStatus !== 'no-change') {
-      const verifiedValue = verifiedStatus === 'verified';
-      values.push(verifiedValue);
-      updates.push(`verified = $${values.length}`);
-    }
-
-    if (!error && bannedStatus && bannedStatus !== 'no-change') {
-      const bannedValue = bannedStatus === 'banned';
-      values.push(bannedValue);
-      updates.push(`banned = $${values.length}`);
-    }
-
     if (!error && updates.length === 0) {
       error = 'Provide at least one field to update.';
     }
 
     if (error) {
-      const { users, listings, auditLogs } = await getAdminDashboardPayload();
-      return res.render('pages/admin-dashboard', {
-        users,
-        listings,
-        auditLogs,
-        userSearch: '',
-        userFilter: '',
-        formatPrice,
-        error,
-        success: null
-      });
+      const { users, listings } = await getAdminDashboardPayload();
+      return res.render('pages/admin-dashboard', { users, listings, formatPrice, error, success: null });
     }
 
     values.push(userId);
     await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
-    await logAdminAction({
-      adminId: res.locals.currentUser.id,
-      action: 'update_user',
-      targetType: 'user',
-      targetId: userId,
-      details: `Updated fields: ${updates.map((update) => update.split('=')[0].trim()).join(', ')}`
-    });
     return res.redirect('/dashboard');
   })
 );
@@ -1908,26 +1826,16 @@ app.post(
       return res.status(404).render('pages/error', { message: 'User not found.' });
     }
     if (isAdminUser(targetUser)) {
-      const { users, listings, auditLogs } = await getAdminDashboardPayload();
+      const { users, listings } = await getAdminDashboardPayload();
       return res.render('pages/admin-dashboard', {
         users,
         listings,
-        auditLogs,
-        userSearch: '',
-        userFilter: '',
         formatPrice,
         error: 'The primary admin account cannot be deleted.',
         success: null
       });
     }
     await query('DELETE FROM users WHERE id = $1', [userId]);
-    await logAdminAction({
-      adminId: res.locals.currentUser.id,
-      action: 'delete_user',
-      targetType: 'user',
-      targetId: userId,
-      details: `Deleted account for ${targetUser.username} (${targetUser.email})`
-    });
     return res.redirect('/dashboard');
   })
 );
@@ -1946,13 +1854,6 @@ app.post(
       return res.status(404).render('pages/error', { message: 'Listing not found.' });
     }
     await query('DELETE FROM listings WHERE id = $1', [listingId]);
-    await logAdminAction({
-      adminId: res.locals.currentUser.id,
-      action: 'delete_listing',
-      targetType: 'listing',
-      targetId: listingId,
-      details: 'Deleted listing via admin dashboard.'
-    });
     return res.redirect('/dashboard');
   })
 );
