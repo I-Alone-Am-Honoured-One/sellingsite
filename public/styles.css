@@ -1531,6 +1531,28 @@ textarea {
   color: var(--muted);
 }
 
+.trust-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.trust-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: rgba(124, 92, 255, 0.08);
+  border: 1px solid rgba(124, 92, 255, 0.2);
+}
+
+.trust-list span {
+  font-size: 1.1rem;
+}
+
 .trust-cards {
   display: grid;
   gap: 1.25rem;
@@ -1636,7 +1658,7 @@ textarea {
   transition: all 0.2s ease;
   margin-bottom: 0.5rem;
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-columns: 42px 1fr auto;
   align-items: center;
   gap: 0.75rem;
 }
@@ -1646,23 +1668,15 @@ textarea {
   background: var(--card-alt);
 }
 
-.thread-item img {
-  width: 56px;
-  height: 56px;
-  border-radius: 0.75rem;
-  object-fit: cover;
-  border: 1px solid var(--border);
-}
-
 .thread-placeholder {
-  width: 56px;
-  height: 56px;
-  border-radius: 0.75rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 0.7rem;
   display: grid;
   place-items: center;
   background: var(--card-alt);
   border: 1px dashed var(--border);
-  font-size: 1.25rem;
+  font-size: 1.1rem;
 }
 
 .thread-summary {
@@ -1677,6 +1691,8 @@ textarea {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 420px;
+  max-height: 560px;
 }
 
 .thread-header {
@@ -1704,6 +1720,13 @@ textarea {
   line-height: 1.5;
 }
 
+.message-time {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: rgba(226, 232, 240, 0.7);
+}
+
 .message.sent {
   align-self: flex-end;
   background: var(--primary);
@@ -1724,9 +1747,15 @@ textarea {
   gap: 0.75rem;
 }
 
-.message-input input {
+.message-input input,
+.message-input textarea {
   flex: 1;
   margin: 0;
+}
+
+.message-input textarea {
+  min-height: 110px;
+  resize: vertical;
 }
 
 /* ==================== ORDERS ==================== */
@@ -1808,23 +1837,23 @@ textarea {
 .site-footer {
   background: rgba(10, 14, 26, 0.9);
   border-top: 1px solid rgba(139, 92, 246, 0.3);
-  padding: 3rem 0 2rem;
-  margin-top: 4rem;
+  padding: 2rem 0 1.5rem;
+  margin-top: 3rem;
 }
 
 .footer-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 2rem;
+  gap: 1.5rem;
   text-align: center;
 }
 
 .footer-section h4 {
   font-family: var(--display-font);
-  font-size: 1.1rem;
+  font-size: 1rem;
   letter-spacing: 0.04em;
   color: #a78bfa;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .footer-section ul {
@@ -1834,11 +1863,12 @@ textarea {
 
 .footer-section p {
   color: #cbd5f5;
+  font-size: 0.95rem;
 }
 
 .footer-disclaimer {
   color: #94a3b8;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .footer-section a {
@@ -1853,9 +1883,10 @@ textarea {
 .socials {
   display: flex;
   justify-content: center;
-  gap: 1.5rem;
-  margin-top: 1rem;
+  gap: 1rem;
+  margin-top: 0.75rem;
   color: #94a3b8;
+  font-size: 0.9rem;
 }
 
 .footer-notes {
@@ -1876,11 +1907,11 @@ textarea {
 
 .footer-bottom {
   text-align: center;
-  margin-top: 2rem;
-  padding-top: 2rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
   border-top: 1px solid rgba(139, 92, 246, 0.3);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 /* ==================== MOBILE RESPONSIVE ==================== */

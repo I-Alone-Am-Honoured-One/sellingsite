@@ -2,8 +2,9 @@
 <section class="container section">
   <div class="thread-header">
     <div>
-      <h1><%= thread.listing_title || 'Conversation' %></h1>
-      <p class="meta">Buyer: <%= thread.buyer_name %> · Seller: <%= thread.seller_name %></p>
+      <% const recipientName = thread.buyer_id === currentUser.id ? thread.seller_name : thread.buyer_name; %>
+      <h1>Chat with <%= recipientName %></h1>
+      <p class="meta"><%= thread.listing_title || 'General inquiry' %></p>
     </div>
     <a class="link" href="/messages">Back to inbox</a>
   </div>
@@ -12,13 +13,13 @@
     <% messages.forEach(message => { %>
       <div class="message <%= message.sender_id === currentUser.id ? 'sent' : 'received' %>">
         <p><%= message.body %></p>
-        <span><%= message.sender_name %> · <%= new Date(message.created_at).toLocaleString() %></span>
+        <span class="message-time"><%= new Date(message.created_at).toLocaleString() %></span>
       </div>
     <% }) %>
     </div>
   </div>
   <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
-    <input type="text" name="body" placeholder="Type your message" required />
+    <textarea name="body" rows="3" placeholder="Type your message" required></textarea>
     <button class="button primary" type="submit">Send</button>
   </form>
 </section>

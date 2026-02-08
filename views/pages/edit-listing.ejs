@@ -56,10 +56,6 @@
     <div class="listing-image-preview">
       <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
     </div>
-    <label>
-      Shipping Details
-      <textarea name="shippingDetails" rows="3" required><%= form?.shippingDetails || listing.shipping_details %></textarea>
-    </label>
     <div class="form-actions">
       <button class="button primary" type="submit">Save changes</button>
       <a class="button ghost" href="/listings/<%= listing.id %>">Cancel</a>
