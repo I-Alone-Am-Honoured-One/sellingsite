@@ -351,15 +351,6 @@ img {
   --preview-padding-x: clamp(1.5rem, 3vw, 2.5rem);
 }
 
-@media (min-width: 1024px) {
-  .profile-header-section.profile-preview {
-    max-width: 100%;
-    --preview-banner-height: clamp(210px, 20vw, 260px);
-    --preview-avatar-size: clamp(160px, 16vw, 200px);
-    --preview-overlap: clamp(48px, 5vw, 70px);
-  }
-}
-
 .profile-header-section.profile-preview .profile-banner {
   height: var(--preview-banner-height);
 }
@@ -424,6 +415,21 @@ img {
   border-radius: 50%;
 }
 
+.image-preview {
+  margin-top: 1rem;
+  display: grid;
+  justify-items: start;
+}
+
+.image-preview img {
+  width: min(360px, 100%);
+  max-height: 360px;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-md);
+  object-fit: cover;
+  background: var(--card-alt);
+}
+
 .image-crop-modal {
   position: fixed;
   inset: 0;
@@ -478,7 +484,6 @@ img {
   touch-action: none;
   aspect-ratio: var(--crop-aspect, 1 / 1);
   min-height: 220px;
-  cursor: grab;
 }
 
 .image-crop-frame::before,
@@ -534,8 +539,6 @@ img {
   max-height: none;
   opacity: 0;
   transition: opacity 0.2s ease;
-  -webkit-user-drag: none;
-  user-drag: none;
 }
 
 .image-crop-frame.is-dragging {
@@ -576,18 +579,6 @@ img {
 
 .image-crop-tip {
   font-style: italic;
-}
-
-@media (pointer: fine) {
-  .image-crop-controls {
-    display: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .image-crop-tip {
-    display: none;
-  }
 }
 
 .image-crop-actions {
