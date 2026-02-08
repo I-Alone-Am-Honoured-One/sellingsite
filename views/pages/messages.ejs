@@ -16,8 +16,9 @@
       <% } %>
       <% threads.forEach(thread => { %>
         <% const recipientName = thread.buyer_id === currentUser.id ? thread.seller_name : thread.buyer_name; %>
+        <% const recipientInitial = (recipientName || '?').charAt(0).toUpperCase(); %>
         <a class="thread-item" href="/messages/<%= thread.id %>">
-          <div class="thread-placeholder">💬</div>
+          <div class="thread-placeholder"><span><%= recipientInitial %></span></div>
           <div class="thread-summary">
             <div class="thread-title">
               <h3><%= recipientName %></h3>

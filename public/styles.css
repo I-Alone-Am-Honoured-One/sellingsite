@@ -2151,45 +2151,65 @@ textarea {
 }
 
 .thread-list {
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
-  padding: 1rem;
+  padding: 0.75rem;
   overflow-y: auto;
   max-height: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .thread-item {
-  padding: 1rem;
-  border-radius: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-bottom: 0.5rem;
   display: grid;
   grid-template-columns: 42px 1fr auto;
   align-items: center;
   gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.25);
+  border: 1px solid transparent;
 }
 
 .thread-item:hover,
 .thread-item.active {
-  background: var(--card-alt);
+  background: rgba(51, 65, 85, 0.4);
+  border-color: rgba(124, 92, 255, 0.35);
 }
 
 .thread-placeholder {
   width: 42px;
   height: 42px;
-  border-radius: 0.7rem;
+  border-radius: 0.9rem;
   display: grid;
   place-items: center;
-  background: var(--card-alt);
-  border: 1px dashed var(--border);
-  font-size: 1.1rem;
+  background: rgba(124, 92, 255, 0.2);
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
 }
 
 .thread-summary {
   display: grid;
   gap: 0.35rem;
+}
+
+.thread-title h3 {
+  font-size: 1rem;
+}
+
+.thread-summary .meta {
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.thread-summary .timestamp {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.8);
 }
 
 .thread-body {
@@ -2202,6 +2222,7 @@ textarea {
   overflow: hidden;
   min-height: 420px;
   max-height: 560px;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.1);
 }
 
 .thread-header {
@@ -2265,57 +2286,131 @@ textarea {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.1rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0));
 }
 
-.message {
-  padding: 0.875rem 1.125rem;
-  border-radius: 1rem;
-  max-width: 70%;
-  line-height: 1.5;
+.message-row {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 0.75rem;
+  align-items: start;
 }
 
-.message-time {
-  display: block;
-  margin-top: 0.4rem;
+.message-row.me {
+  grid-template-columns: 1fr 40px;
+}
+
+.message-row.me .message-avatar {
+  grid-column: 2;
+}
+
+.message-row.me .message-content {
+  grid-column: 1;
+  text-align: right;
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(124, 92, 255, 0.2);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
   font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: rgba(226, 232, 240, 0.7);
 }
 
-.message.sent {
-  align-self: flex-end;
-  background: var(--primary);
-  color: white;
-  border-bottom-right-radius: 0.25rem;
+.message-row.me .message-meta {
+  justify-content: flex-end;
 }
 
-.message.received {
-  align-self: flex-start;
-  background: var(--card-alt);
-  border-bottom-left-radius: 0.25rem;
+.message-sender {
+  font-weight: 600;
+  color: #f8fafc;
 }
 
-.message-input {
-  padding: 1.5rem;
+.message-timestamp {
+  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.message-bubble {
+  padding: 0.85rem 1.1rem;
+  border-radius: 1rem;
+  max-width: 80%;
+  line-height: 1.5;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+.message-row.me .message-bubble {
+  margin-left: auto;
+  background: linear-gradient(135deg, rgba(124, 92, 255, 0.95), rgba(79, 70, 229, 0.9));
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  color: #fff;
+}
+
+.message-composer {
+  padding: 1.25rem 1.5rem;
   border-top: 1px solid var(--border);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.45);
 }
 
-.message-input input,
-.message-input textarea {
+.composer-input {
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.message-composer textarea {
   flex: 1;
   margin: 0;
+  background: transparent;
+  border: none;
+  color: #f8fafc;
+  min-height: 48px;
+  resize: none;
 }
 
-.message-input textarea {
-  min-height: 72px;
-  resize: vertical;
+.message-composer textarea::placeholder {
+  color: rgba(148, 163, 184, 0.7);
 }
 
 .message-textarea {
   resize: none;
-  max-height: 240px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -2324,6 +2419,7 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  height: 48px;
 }
 
 .send-button .send-icon {
@@ -2824,12 +2920,12 @@ textarea {
     font-size: 1.35rem;
   }
 
-  .message-input {
+  .message-composer {
     padding: 1rem;
     align-items: flex-end;
   }
 
-  .message-input textarea {
+  .message-composer textarea {
     min-height: 44px;
     max-height: 160px;
     padding: 0.65rem 0.85rem;
@@ -2837,7 +2933,7 @@ textarea {
     line-height: 1.4;
   }
 
-  .message-input .send-button {
+  .message-composer .send-button {
     width: 44px;
     min-width: 44px;
     height: 44px;
@@ -2847,11 +2943,11 @@ textarea {
     place-items: center;
   }
 
-  .message-input .send-label {
+  .message-composer .send-label {
     display: none;
   }
 
-  .message-input .send-icon {
+  .message-composer .send-icon {
     width: 20px;
     height: 20px;
   }

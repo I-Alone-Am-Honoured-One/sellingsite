@@ -37,7 +37,23 @@ if (isCloudinaryConfigured) {
   });
 }
 
-const storage = multer.memoryStorage();
+const uploadDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, 'public', 'uploads');
+if (!isCloudinaryConfigured && !fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = isCloudinaryConfigured
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: uploadDir,
+      filename: (req, file, cb) => {
+        const timestamp = Date.now();
+        const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '-');
+        cb(null, `${timestamp}-${safeName}`);
+      }
+    });
 
 const upload = multer({
   storage,
@@ -65,6 +81,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+if (!isCloudinaryConfigured) {
+  app.use('/uploads', express.static(uploadDir));
+}
 
 ensureSessionsTable().catch((error) => {
   console.error('Failed to ensure sessions table exists:', error);
