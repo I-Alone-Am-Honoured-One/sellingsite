@@ -2596,6 +2596,36 @@ textarea {
     max-height: 300px;
   }
 
+  .message-input {
+    padding: 1rem;
+    align-items: flex-end;
+  }
+
+  .message-input textarea {
+    min-height: 56px;
+    max-height: 160px;
+    padding: 0.65rem 0.85rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .message-input .send-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 0;
+  }
+
+  .message-input .send-button::before {
+    content: '➤';
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
   .order-card {
     flex-direction: column;
   }
