@@ -1,13 +1,13 @@
 <%- include('../partials/header') %>
 <% const categoryIcons = { Games: '🎮', Consoles: '🕹️', Accessories: '🎧', 'Gift Cards': '🎁' }; %>
-<section class="hero">
-  <div class="container hero-content">
+<section class="hero hero-rebuild">
+  <div class="container hero-grid">
     <div class="hero-copy">
-      <p class="badge">Verified gamer marketplace</p>
-      <h1>Trade games, consoles, and gear in a cyber arena built for gamers.</h1>
+      <p class="badge">Marketplace meets guild profiles</p>
+      <h1>A gaming-first resale hub with Discord-style profiles and Vinted-fast deals.</h1>
       <p class="subtitle">
-        Sellar keeps every deal protected with escrow payments, delivery tracking, and a 24-hour confirmation
-        window. Build your seller rep, chat instantly, and move gear with confidence.
+        Browse verified drops, chat in real time, and show off your banner + avatar. Every seller gets a public
+        profile at /username so buyers can scout their reputation before they buy.
       </p>
       <div class="hero-actions">
         <a class="button primary" href="/marketplace">Browse Marketplace</a>
@@ -17,11 +17,17 @@
           <a class="button ghost" href="/auth/register">Join the arena</a>
         <% } %>
       </div>
+      <div class="hero-tags">
+        <span class="tag-chip">Custom banners</span>
+        <span class="tag-chip">Avatar loadouts</span>
+        <span class="tag-chip">Escrow shield</span>
+        <span class="tag-chip">Guild chat</span>
+      </div>
       <div class="hero-stats">
         <div class="stat-card">
           <span class="stat-icon" aria-hidden="true">👾</span>
           <div>
-            <h3><%= stats?.users_count || 0 %>+</h3> <!-- Use optional chaining to avoid errors if stats is missing -->
+            <h3><%= stats?.users_count || 0 %>+</h3>
             <p>Active traders</p>
           </div>
         </div>
@@ -41,52 +47,66 @@
         </div>
       </div>
     </div>
-    <div class="hero-visual">
-      <div class="hero-card">
+    <div class="hero-visual hero-panels">
+      <div class="hero-card hero-panel">
         <div class="hero-visual-header">
           <div>
-            <p class="eyebrow">Live drop board</p>
-            <h3>Tonight’s launch queue</h3>
+            <p class="eyebrow">Server lounge</p>
+            <h3>Live trade channels</h3>
           </div>
-          <span class="hero-status">Live</span>
+          <span class="hero-status">Online</span>
         </div>
-        <p class="muted">Watch the latest listings, seller scores, and community activity in real time.</p>
+        <ul class="channel-list">
+          <li><span># hot-drops</span><span class="badge accent">+42</span></li>
+          <li><span># console-swaps</span><span class="badge ghost">New</span></li>
+          <li><span># seller-ratings</span><span class="badge">4.9★</span></li>
+          <li><span># escrow-support</span><span class="badge ghost">24/7</span></li>
+        </ul>
+        <p class="muted">Chat with sellers, track drops, and verify trade history in one place.</p>
+      </div>
+      <div class="hero-card hero-panel profile-snapshot">
+        <div class="profile-banner demo-banner">
+          <span class="badge accent">Featured</span>
+        </div>
+        <div class="profile-snapshot-body">
+          <div class="profile-avatar-large">
+            <span>V</span>
+          </div>
+          <div>
+            <h3>ValkyrieHub</h3>
+            <p class="muted">Custom neon banner · 128 sales · 4.9 rating</p>
+          </div>
+        </div>
         <div class="hero-chip-row">
-          <span class="hero-chip">Escrow ready</span>
-          <span class="hero-chip">Instant chat</span>
-          <span class="hero-chip">Verified drops</span>
-        </div>
-        <div class="hero-activity">
-          <div class="activity-row">
-            <span class="activity-icon" aria-hidden="true">⚡</span>
-            <div>
-              <strong>Pulse monitoring</strong>
-              <span>1,200+ chats started today</span>
-            </div>
-            <span class="badge accent">+18%</span>
-          </div>
-          <div class="activity-row">
-            <span class="activity-icon" aria-hidden="true">🛡️</span>
-            <div>
-              <strong>Escrow shield</strong>
-              <span>Protected payouts on every trade</span>
-            </div>
-            <span class="badge ghost">Always on</span>
-          </div>
+          <span class="hero-chip">Public /valkyriehub</span>
+          <span class="hero-chip">Banner builder</span>
+          <span class="hero-chip">Verified seller</span>
         </div>
       </div>
-      <div class="hero-card">
-        <h3>How it works</h3>
-        <ol>
-          <li>Buyers pay through Sellar escrow.</li>
-          <li>Sellers ship with tracking or local pickup.</li>
-          <li>Buyers confirm within 24 hours or open a dispute.</li>
-          <li>Funds release instantly after confirmation.</li>
-        </ol>
-        <div class="hero-highlight">
-          <p>🚀 Same-day payouts for top-rated sellers.</p>
-        </div>
-      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container section community-lobby">
+  <div class="section-header">
+    <div>
+      <h2>Build your gamer identity</h2>
+      <p class="muted">Customize your shopfront like a Discord profile and keep your buy/sell history visible.</p>
+    </div>
+    <a class="link" href="/settings">Customize profile</a>
+  </div>
+  <div class="lobby-grid">
+    <div class="lobby-card">
+      <h3>Banner + avatar loadout</h3>
+      <p>Upload your banner art, pick neon colors, and set your avatar to match your shop vibe.</p>
+    </div>
+    <div class="lobby-card">
+      <h3>Public /username pages</h3>
+      <p>Every profile is shareable, so buyers can trust your reviews and see recent listings.</p>
+    </div>
+    <div class="lobby-card">
+      <h3>Instant buyer chat</h3>
+      <p>Move straight into messages from any listing and track escrow updates in real time.</p>
     </div>
   </div>
 </section>

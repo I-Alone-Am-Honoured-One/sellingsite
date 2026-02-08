@@ -1,0 +1,122 @@
+<%- include('../partials/header') %>
+<% const bannerStyles = []; %>
+<% if (user.profile_background_url) { %>
+  <% bannerStyles.push(`background-image: url('${user.profile_background_url}')`); %>
+<% } %>
+<% if (user.profile_background_color) { %>
+  <% bannerStyles.push(`background-color: ${user.profile_background_color}`); %>
+<% } %>
+
+<section class="profile-hub">
+  <div class="profile-banner profile-banner-public" style="<%= bannerStyles.join('; ') %>">
+    <div class="profile-banner-overlay"></div>
+  </div>
+  <div class="container profile-hub-content">
+    <div class="profile-hub-card">
+      <div class="profile-avatar-large">
+        <% if (user.avatar_url) { %>
+          <img src="<%= user.avatar_url %>" alt="<%= user.username %> avatar" />
+        <% } else { %>
+          <span><%= user.username.slice(0, 1).toUpperCase() %></span>
+        <% } %>
+      </div>
+      <div class="profile-hub-meta">
+        <h1><%= user.username %></h1>
+        <p class="muted">Public profile · /<%= user.username %></p>
+        <% if (user.bio && user.bio.trim()) { %>
+          <p class="profile-bio-text"><%= user.bio %></p>
+        <% } else { %>
+          <p class="profile-bio-placeholder">No bio yet. This seller is still customizing their loadout.</p>
+        <% } %>
+        <div class="profile-stats-row">
+          <div class="stat-item">
+            <div class="stat-number"><%= listingCount %></div>
+            <div class="stat-label">Listings</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number"><%= salesCount %></div>
+            <div class="stat-label">Sales</div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-hub-actions">
+        <% if (isSelf) { %>
+          <a class="button primary" href="/settings">Edit your profile</a>
+        <% } else { %>
+          <a class="button primary" href="/marketplace">Browse marketplace</a>
+        <% } %>
+        <a class="button ghost" href="/marketplace">Find more sellers</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h2>Seller loadout</h2>
+      <p class="muted">Verified details and social links.</p>
+    </div>
+  </div>
+  <div class="lobby-grid">
+    <div class="lobby-card">
+      <h3>Steam identity</h3>
+      <% if (user.steam_profile_url || user.steam_id) { %>
+        <p>
+          <% if (user.steam_profile_url) { %>
+            <a href="<%= user.steam_profile_url %>" target="_blank" rel="noreferrer">View Steam profile</a>
+          <% } else { %>
+            <span><%= user.steam_id %></span>
+          <% } %>
+        </p>
+      <% } else { %>
+        <p class="muted">No Steam profile connected yet.</p>
+      <% } %>
+    </div>
+    <div class="lobby-card">
+      <h3>Trade status</h3>
+      <p>Escrow-ready seller with verified payout protection.</p>
+    </div>
+    <div class="lobby-card">
+      <h3>Community rep</h3>
+      <p>Listings and sales history stay visible for every buyer.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section alt">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h2>Listings by <%= user.username %></h2>
+        <p class="muted">Shop the latest gear from this seller.</p>
+      </div>
+      <a class="link" href="/marketplace">See all</a>
+    </div>
+    <div class="card-grid">
+      <% if (!listings || listings.length === 0) { %>
+        <div class="empty-state">
+          <h3>No listings live</h3>
+          <p>Check back soon for new drops from this seller.</p>
+          <a class="button ghost" href="/marketplace">Explore marketplace</a>
+        </div>
+      <% } %>
+      <% (listings || []).forEach(listing => { %>
+        <a class="card" href="/listings/<%= listing.id %>">
+          <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+          <div class="card-body">
+            <div class="card-title">
+              <h3><%= listing.title %></h3>
+              <span class="badge ghost"><%= listing.condition %></span>
+            </div>
+            <p class="price"><%= formatPrice(listing.price_cents) %></p>
+            <p class="meta"><%= listing.category %> · Seller: <%= listing.seller_name %></p>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>
