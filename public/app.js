@@ -217,26 +217,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000);
   });
 
-  // Add loading state to buttons on form submit
-  forms.forEach(form => {
-    form.addEventListener('submit', (e) => {
-      const submitButton = form.querySelector('button[type="submit"]');
-      if (submitButton && !submitButton.disabled) {
-        submitButton.disabled = true;
-        const originalText = submitButton.textContent;
-        submitButton.textContent = 'Loading...';
-        submitButton.style.opacity = '0.7';
-        
-        // Re-enable after 3 seconds as a fallback
-        setTimeout(() => {
-          submitButton.disabled = false;
-          submitButton.textContent = originalText;
-          submitButton.style.opacity = '1';
-        }, 3000);
-      }
-    });
-  });
-
   // Smooth scroll for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
