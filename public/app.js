@@ -144,7 +144,15 @@ document.addEventListener('DOMContentLoaded', () => {
   textareas.forEach(textarea => {
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
+      const styles = window.getComputedStyle(textarea);
+      const maxHeight = parseFloat(styles.maxHeight);
+      if (!Number.isNaN(maxHeight) && maxHeight > 0 && textarea.scrollHeight > maxHeight) {
+        textarea.style.height = `${maxHeight}px`;
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.height = `${textarea.scrollHeight}px`;
+        textarea.style.overflowY = 'hidden';
+      }
     });
   });
 

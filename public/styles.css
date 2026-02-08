@@ -2069,6 +2069,7 @@ textarea {
   border-radius: 1.25rem;
   display: flex;
   flex-direction: column;
+  gap: 0;
   overflow: hidden;
   min-height: 420px;
   max-height: 560px;
@@ -2086,6 +2087,7 @@ textarea {
 .thread-messages {
   flex: 1;
   padding: 1.5rem;
+  padding-bottom: 1rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2135,6 +2137,25 @@ textarea {
 .message-input textarea {
   min-height: 110px;
   resize: vertical;
+}
+
+.message-textarea {
+  resize: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.send-button .send-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
 }
 
 /* ==================== ORDERS ==================== */
@@ -2594,6 +2615,39 @@ textarea {
 
   .thread-list {
     max-height: 300px;
+  }
+
+  .message-input {
+    padding: 1rem;
+    align-items: center;
+  }
+
+  .message-input textarea {
+    min-height: 44px;
+    max-height: 120px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    resize: none;
+    overflow-y: auto;
+  }
+
+  .message-input .send-button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 999px;
+    gap: 0;
+  }
+
+  .message-input .send-label {
+    display: none;
+  }
+
+  .message-input .send-icon {
+    width: 18px;
+    height: 18px;
   }
 
   .order-card {
