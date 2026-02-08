@@ -84,73 +84,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const setPreviewImage = (input, previewUrl) => {
-    const existing = input.parentElement.querySelector('.settings-preview');
+    const existing = input.parentElement.querySelector('.upload-preview');
     if (existing) {
       existing.remove();
     }
-
-    const preview = document.createElement('section');
-    preview.className = 'settings-preview';
-    preview.dataset.previewType = input.name;
-
-    const header = document.createElement('header');
-    header.className = 'settings-preview__header';
-    header.innerHTML = `
-      <div class="settings-preview__titles">
-        <p class="settings-preview__eyebrow">Settings preview</p>
-        <h4 class="settings-preview__title">${input.name === 'background' ? 'Banner preview' : 'Avatar preview'}</h4>
-        <p class="settings-preview__subtitle">${input.name === 'background' ? 'Wide 3:1 crop for the profile banner.' : 'Square 1:1 crop for your avatar.'}</p>
-      </div>
-      <div class="settings-preview__badge">${input.name === 'background' ? 'Banner' : 'Avatar'}</div>
+    preview.innerHTML = `
+      <img src="${previewUrl}" alt="Preview" loading="lazy" />
     `;
-
-    const body = document.createElement('div');
-    body.className = 'settings-preview__body';
-
-    const media = document.createElement('div');
-    media.className = 'settings-preview__media';
-    const img = document.createElement('img');
-    img.src = previewUrl;
-    img.alt = 'Preview';
-    img.loading = 'lazy';
-    img.draggable = false;
-    media.appendChild(img);
-
-    const sidebar = document.createElement('aside');
-    sidebar.className = 'settings-preview__aside';
-    sidebar.innerHTML = `
-      <div class="settings-preview__info">
-        <p class="settings-preview__label">Live output</p>
-        <p class="settings-preview__value">Updates after crop</p>
-      </div>
-      <div class="settings-preview__info">
-        <p class="settings-preview__label">Drag</p>
-        <p class="settings-preview__value">Move to align</p>
-      </div>
-      <div class="settings-preview__info">
-        <p class="settings-preview__label">Zoom</p>
-        <p class="settings-preview__value">Scroll / pinch</p>
-      </div>
-      <div class="settings-preview__info">
-        <p class="settings-preview__label">Safe area</p>
-        <p class="settings-preview__value">Crop frame guides</p>
-      </div>
-    `;
-
-    const footer = document.createElement('footer');
-    footer.className = 'settings-preview__footer';
-    footer.innerHTML = `
-      <div class="settings-preview__chip">High resolution</div>
-      <div class="settings-preview__chip">${input.name === 'background' ? 'Banner-ready' : 'Avatar-ready'}</div>
-      <div class="settings-preview__chip">Responsive width</div>
-    `;
-
-    body.appendChild(media);
-    body.appendChild(sidebar);
-    preview.appendChild(header);
-    preview.appendChild(body);
-    preview.appendChild(footer);
-    input.parentElement.appendChild(preview);
   };
 
   const setProfilePreviewImage = (input, previewUrl) => {
@@ -210,8 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
       this.resizeObserver = null;
 
       this.bindEvents();
-      this.setTipVisibility();
-      this.disableNativeDrag();
     }
 
     createModal() {
@@ -254,6 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
     bindEvents() {
       if (!this.modal) return;
 
+      this.image.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+      this.image.addEventListener('pointermove', (e) => this.onPointerMove(e));
+      this.image.addEventListener('pointerup', (e) => this.onPointerUp(e));
+      this.image.addEventListener('pointercancel', (e) => this.onPointerUp(e));
+
       this.frame.addEventListener('pointerdown', (e) => this.onFramePointerDown(e));
       this.frame.addEventListener('pointermove', (e) => this.onFramePointerMove(e));
       this.frame.addEventListener('pointerup', (e) => this.onFramePointerUp(e));
@@ -276,22 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       window.addEventListener('resize', () => this.handleResize());
       window.addEventListener('orientationchange', () => this.handleResize());
-    }
-
-    disableNativeDrag() {
-      if (this.image) {
-        this.image.setAttribute('draggable', 'false');
-        this.image.addEventListener('dragstart', (e) => e.preventDefault());
-      }
-      if (this.frame) {
-        this.frame.addEventListener('dragstart', (e) => e.preventDefault());
-      }
-    }
-
-    setTipVisibility() {
-      if (!this.tipLabel) return;
-      const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
-      this.tipLabel.hidden = !isTouchDevice;
     }
 
     handleResize() {
@@ -568,11 +495,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onPointerDown(e) {
       if (!this.activeCrop) return;
-      if (e.pointerType === 'touch' && this.activePointers.size > 1) return;
-      if (e.pointerType !== 'touch') {
-        this.activePointers.clear();
-      }
-      e.preventDefault();
       this.isDragging = true;
       this.image.classList.add('is-dragging');
       this.image.setPointerCapture(e.pointerId);
@@ -602,60 +524,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     onFramePointerDown(e) {
-      if (!this.activeCrop) return;
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
-      if (e.pointerType === 'touch') {
-        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      } else {
-        this.activePointers.clear();
-      }
-      e.preventDefault();
+      if (!this.activeCrop || e.pointerType !== 'touch') return;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       this.frame.setPointerCapture(e.pointerId);
-      if (this.activePointers.size === 1) {
-        this.isDragging = true;
-        this.frame.classList.add('is-dragging');
-        this.dragStart = { x: e.clientX, y: e.clientY };
-        this.dragOrigin = { x: this.activeCrop.translateX, y: this.activeCrop.translateY };
-      }
       if (this.activePointers.size === 2) {
         const [first, second] = Array.from(this.activePointers.values());
         const distance = getDistance(first, second);
         this.pinchState = { distance, zoom: this.activeCrop.zoom };
         this.isDragging = false;
-        this.frame.classList.remove('is-dragging');
-      }
-      if (e.pointerType !== 'touch') {
-        this.isDragging = true;
-        this.frame.classList.add('is-dragging');
-        this.dragStart = { x: e.clientX, y: e.clientY };
-        this.dragOrigin = { x: this.activeCrop.translateX, y: this.activeCrop.translateY };
+        this.image.classList.remove('is-dragging');
       }
     }
 
     onFramePointerMove(e) {
-      if (!this.activeCrop) return;
-      if (e.pointerType === 'touch') {
-        if (!this.activePointers.has(e.pointerId)) return;
-        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      }
-      if (e.pointerType !== 'touch' && this.isDragging) {
-        e.preventDefault();
-        const deltaX = e.clientX - this.dragStart.x;
-        const deltaY = e.clientY - this.dragStart.y;
-        this.activeCrop.translateX = this.dragOrigin.x + deltaX;
-        this.activeCrop.translateY = this.dragOrigin.y + deltaY;
-        this.updateCropTransform();
-        return;
-      }
-      if (this.activePointers.size === 1 && this.isDragging) {
-        e.preventDefault();
-        const deltaX = e.clientX - this.dragStart.x;
-        const deltaY = e.clientY - this.dragStart.y;
-        this.activeCrop.translateX = this.dragOrigin.x + deltaX;
-        this.activeCrop.translateY = this.dragOrigin.y + deltaY;
-        this.updateCropTransform();
-        return;
-      }
+      if (!this.activeCrop || e.pointerType !== 'touch') return;
+      if (!this.activePointers.has(e.pointerId)) return;
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.activePointers.size !== 2 || !this.pinchState) return;
 
       const [first, second] = Array.from(this.activePointers.values());
@@ -666,19 +550,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     onFramePointerUp(e) {
-      if (e.pointerType === 'touch') {
-        this.activePointers.delete(e.pointerId);
-        if (this.activePointers.size < 2) {
-          this.pinchState = null;
-        }
-        if (this.activePointers.size === 0) {
-          this.isDragging = false;
-          this.frame.classList.remove('is-dragging');
-        }
-        return;
+      if (e.pointerType !== 'touch') return;
+      this.activePointers.delete(e.pointerId);
+      if (this.activePointers.size < 2) {
+        this.pinchState = null;
       }
-      this.isDragging = false;
-      this.frame.classList.remove('is-dragging');
     }
 
     onWheelZoom(e) {
