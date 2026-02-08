@@ -90,6 +90,9 @@ ensureUserAuthColumns().catch((error) => {
 ensureChessTables().catch((error) => {
   console.error('Failed to ensure chess tables exist:', error);
 });
+ensureAdminAuditTable().catch((error) => {
+  console.error('Failed to ensure admin audit table exists:', error);
+});
 
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -114,6 +117,8 @@ async function ensureUserAuthColumns() {
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_profile_url TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_url TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_color TEXT');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned BOOLEAN DEFAULT FALSE');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique ON users (google_id)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique ON users (google_email)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_steam_id_unique ON users (steam_id)');
@@ -134,6 +139,20 @@ async function ensureChessTables() {
       id SERIAL PRIMARY KEY,
       white_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       black_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+  );
+}
+
+async function ensureAdminAuditTable() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id INTEGER,
+      details TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`
   );
@@ -411,6 +430,22 @@ async function requireAuth(req, res, next) {
   next();
 }
 
+function isAdminUser(user) {
+  return (
+    user &&
+    user.username === 'Admin' &&
+    user.email &&
+    user.email.toLowerCase() === 'mariusjon101@gmail.com'
+  );
+}
+
+function requireAdmin(req, res, next) {
+  if (!isAdminUser(res.locals.currentUser)) {
+    return res.status(403).render('pages/error', { message: 'You do not have access to this page.' });
+  }
+  next();
+}
+
 async function getProfilePayload(userId) {
   const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
   const user = userRows[0];
@@ -438,10 +473,65 @@ async function getSettingsPayload(userId) {
   return { user, listings };
 }
 
+async function getAdminDashboardPayload({ userSearch, userFilter } = {}) {
+  const userFilters = [];
+  const userValues = [];
+
+  if (userSearch) {
+    userValues.push(`%${userSearch}%`);
+    userFilters.push(`(username ILIKE $${userValues.length} OR email ILIKE $${userValues.length})`);
+  }
+
+  if (userFilter === 'banned') {
+    userFilters.push('banned = true');
+  }
+  if (userFilter === 'verified') {
+    userFilters.push('verified = true');
+  }
+  if (userFilter === 'new') {
+    userFilters.push("created_at >= NOW() - INTERVAL '7 days'");
+  }
+
+  const userWhere = userFilters.length ? `WHERE ${userFilters.join(' AND ')}` : '';
+  const { rows: users } = await query(
+    `SELECT id, username, email, created_at, banned, verified
+     FROM users
+     ${userWhere}
+     ORDER BY created_at DESC`,
+    userValues
+  );
+
+  const { rows: listings } = await query(
+    `SELECT listings.*, users.username AS seller_name
+     FROM listings
+     JOIN users ON listings.seller_id = users.id
+     ORDER BY listings.created_at DESC`
+  );
+
+  const { rows: auditLogs } = await query(
+    `SELECT admin_audit_logs.*, users.username AS admin_username
+     FROM admin_audit_logs
+     JOIN users ON admin_audit_logs.admin_id = users.id
+     ORDER BY admin_audit_logs.created_at DESC
+     LIMIT 25`
+  );
+
+  return { users, listings, auditLogs };
+}
+
+async function logAdminAction({ adminId, action, targetType, targetId, details }) {
+  await query(
+    `INSERT INTO admin_audit_logs (admin_id, action, target_type, target_id, details)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [adminId, action, targetType, targetId || null, details || null]
+  );
+}
+
 app.use(asyncHandler(async (req, res, next) => {
   await refreshUserSession(req, res);
   res.locals.currentPath = req.path;
   res.locals.isActivePath = (pathPrefix) => req.path === pathPrefix || req.path.startsWith(`${pathPrefix}/`);
+  res.locals.isAdmin = isAdminUser(res.locals.currentUser);
   next();
 }));
 
@@ -1676,6 +1766,194 @@ app.post(
 
     const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
     res.render('pages/settings', { user, listings, formatPrice, error, success });
+  })
+);
+
+app.get(
+  '/dashboard',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const userSearch = (req.query.search || '').trim();
+    const userFilter = (req.query.filter || '').trim();
+    const { users, listings, auditLogs } = await getAdminDashboardPayload({ userSearch, userFilter });
+    res.render('pages/admin-dashboard', {
+      users,
+      listings,
+      auditLogs,
+      userSearch,
+      userFilter,
+      formatPrice,
+      error: null,
+      success: null
+    });
+  })
+);
+
+app.post(
+  '/dashboard/users/:id/update',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).render('pages/error', { message: 'Invalid user id.' });
+    }
+
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password || '';
+    const verifiedStatus = (req.body.verified_status || '').trim();
+    const bannedStatus = (req.body.banned_status || '').trim();
+
+    let error = null;
+    const updates = [];
+    const values = [];
+
+    if (username) {
+      const { rows: existingUsers } = await query(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2 LIMIT 1',
+        [username, userId]
+      );
+      if (existingUsers.length) {
+        error = 'That username is already in use.';
+      } else {
+        values.push(username);
+        updates.push(`username = $${values.length}`);
+      }
+    }
+
+    if (!error && email) {
+      if (!isValidEmail(email)) {
+        error = 'Please enter a valid email.';
+      } else {
+        const { rows: existingEmails } = await query(
+          'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2 LIMIT 1',
+          [email, userId]
+        );
+        if (existingEmails.length) {
+          error = 'That email is already in use.';
+        } else {
+          values.push(email);
+          updates.push(`email = $${values.length}`);
+        }
+      }
+    }
+
+    if (!error && password) {
+      if (password.length < 8) {
+        error = 'Password must be at least 8 characters.';
+      } else {
+        const passwordHash = await bcrypt.hash(password, 10);
+        values.push(passwordHash);
+        updates.push(`password_hash = $${values.length}`);
+      }
+    }
+
+    if (!error && verifiedStatus && verifiedStatus !== 'no-change') {
+      const verifiedValue = verifiedStatus === 'verified';
+      values.push(verifiedValue);
+      updates.push(`verified = $${values.length}`);
+    }
+
+    if (!error && bannedStatus && bannedStatus !== 'no-change') {
+      const bannedValue = bannedStatus === 'banned';
+      values.push(bannedValue);
+      updates.push(`banned = $${values.length}`);
+    }
+
+    if (!error && updates.length === 0) {
+      error = 'Provide at least one field to update.';
+    }
+
+    if (error) {
+      const { users, listings, auditLogs } = await getAdminDashboardPayload();
+      return res.render('pages/admin-dashboard', {
+        users,
+        listings,
+        auditLogs,
+        userSearch: '',
+        userFilter: '',
+        formatPrice,
+        error,
+        success: null
+      });
+    }
+
+    values.push(userId);
+    await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
+    await logAdminAction({
+      adminId: res.locals.currentUser.id,
+      action: 'update_user',
+      targetType: 'user',
+      targetId: userId,
+      details: `Updated fields: ${updates.map((update) => update.split('=')[0].trim()).join(', ')}`
+    });
+    return res.redirect('/dashboard');
+  })
+);
+
+app.post(
+  '/dashboard/users/:id/delete',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).render('pages/error', { message: 'Invalid user id.' });
+    }
+    const { rows } = await query('SELECT username, email FROM users WHERE id = $1', [userId]);
+    const targetUser = rows[0];
+    if (!targetUser) {
+      return res.status(404).render('pages/error', { message: 'User not found.' });
+    }
+    if (isAdminUser(targetUser)) {
+      const { users, listings, auditLogs } = await getAdminDashboardPayload();
+      return res.render('pages/admin-dashboard', {
+        users,
+        listings,
+        auditLogs,
+        userSearch: '',
+        userFilter: '',
+        formatPrice,
+        error: 'The primary admin account cannot be deleted.',
+        success: null
+      });
+    }
+    await query('DELETE FROM users WHERE id = $1', [userId]);
+    await logAdminAction({
+      adminId: res.locals.currentUser.id,
+      action: 'delete_user',
+      targetType: 'user',
+      targetId: userId,
+      details: `Deleted account for ${targetUser.username} (${targetUser.email})`
+    });
+    return res.redirect('/dashboard');
+  })
+);
+
+app.post(
+  '/dashboard/listings/:id/delete',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const listingId = Number(req.params.id);
+    if (!Number.isInteger(listingId)) {
+      return res.status(400).render('pages/error', { message: 'Invalid listing id.' });
+    }
+    const { rows } = await query('SELECT id FROM listings WHERE id = $1', [listingId]);
+    if (!rows[0]) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    await query('DELETE FROM listings WHERE id = $1', [listingId]);
+    await logAdminAction({
+      adminId: res.locals.currentUser.id,
+      action: 'delete_listing',
+      targetType: 'listing',
+      targetId: listingId,
+      details: 'Deleted listing via admin dashboard.'
+    });
+    return res.redirect('/dashboard');
   })
 );
 
