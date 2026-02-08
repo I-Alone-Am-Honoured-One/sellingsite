@@ -179,9 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
       cropModal.hidden = false;
       cropFrame.classList.toggle('is-circle', input.name === 'avatar');
       cropFrame.classList.toggle('is-banner', input.name === 'background');
-      cropImage.style.transform = 'translate(0px, 0px) scale(1)';
-      cropImage.style.width = '';
-      cropImage.style.height = '';
 
       const frameWidth = cropFrame.clientWidth;
       const frameHeight = frameWidth / aspect;
@@ -214,11 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.translateX = (frameWidth - state.displayWidth) / 2;
         state.translateY = (frameHeight - state.displayHeight) / 2;
         cropZoom.value = '1';
-        cropImage.style.width = `${imageEl.width}px`;
-        cropImage.style.height = `${imageEl.height}px`;
-        requestAnimationFrame(() => {
-          centerCrop();
-        });
+        centerCrop();
       };
       imageEl.src = previewUrl;
     };
@@ -580,26 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
         alert.remove();
       }, 300);
     }, 5000);
-  });
-
-  // Add loading state to buttons on form submit
-  forms.forEach(form => {
-    form.addEventListener('submit', (e) => {
-      const submitButton = form.querySelector('button[type="submit"]');
-      if (submitButton && !submitButton.disabled) {
-        submitButton.disabled = true;
-        const originalText = submitButton.textContent;
-        submitButton.textContent = 'Loading...';
-        submitButton.style.opacity = '0.7';
-        
-        // Re-enable after 3 seconds as a fallback
-        setTimeout(() => {
-          submitButton.disabled = false;
-          submitButton.textContent = originalText;
-          submitButton.style.opacity = '1';
-        }, 3000);
-      }
-    });
   });
 
   // Smooth scroll for anchor links

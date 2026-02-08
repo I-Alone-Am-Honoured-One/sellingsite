@@ -588,14 +588,6 @@ img {
   border-radius: 1rem;
 }
 
-.image-crop-frame.is-banner {
-  border-radius: 0.5rem;
-}
-
-.image-crop-frame.is-banner::before {
-  border-radius: 0.5rem;
-}
-
 .image-crop-mask {
   position: absolute;
   inset: 0;
@@ -619,7 +611,7 @@ img {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
   border: 2px solid rgba(248, 250, 252, 0.55);
 }
 
@@ -3367,6 +3359,25 @@ textarea {
 
   .profile-header-section.profile-preview .profile-display-name {
     font-size: 1.6rem;
+  }
+
+  .profile-header-section.profile-preview .profile-banner {
+    height: 120px;
+  }
+
+  .profile-header-section.profile-preview .profile-header-content {
+    padding: 0 1.5rem 1.5rem;
+    margin-top: -36px;
+  }
+
+  .profile-header-section.profile-preview .profile-avatar-large {
+    width: 90px;
+    height: 90px;
+    font-size: 2.25rem;
+  }
+
+  .profile-header-section.profile-preview .profile-display-name {
+    font-size: 1.35rem;
   }
 
   .stat-number {
