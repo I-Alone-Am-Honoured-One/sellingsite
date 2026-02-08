@@ -20,14 +20,31 @@
   <div class="thread-body">
     <div class="thread-messages" id="threadMessages">
     <% messages.forEach(message => { %>
-      <div class="message <%= message.sender_id === currentUser.id ? 'sent' : 'received' %>">
-        <p><%= message.body %></p>
-        <span class="message-time"><%= new Date(message.created_at).toLocaleString() %></span>
+      <% const isCurrentUser = message.sender_id === currentUser.id; %>
+      <% const senderName = isCurrentUser ? 'You' : message.sender_name; %>
+      <% const senderInitial = (senderName || '?').charAt(0).toUpperCase(); %>
+      <div class="message-row <%= isCurrentUser ? 'me' : 'them' %>">
+        <div class="message-avatar">
+          <% if (message.sender_avatar) { %>
+            <img src="<%= message.sender_avatar %>" alt="<%= senderName %> avatar" />
+          <% } else { %>
+            <span><%= senderInitial %></span>
+          <% } %>
+        </div>
+        <div class="message-content">
+          <div class="message-meta">
+            <span class="message-sender"><%= senderName %></span>
+            <span class="message-timestamp"><%= new Date(message.created_at).toLocaleString() %></span>
+          </div>
+          <div class="message-bubble"><%= message.body %></div>
+        </div>
       </div>
     <% }) %>
     </div>
-    <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
-      <textarea class="message-textarea" name="body" rows="3" placeholder="Type your message" required></textarea>
+    <form class="message-composer" method="POST" action="/messages/<%= thread.id %>">
+      <div class="composer-input">
+        <textarea class="message-textarea" name="body" rows="2" placeholder="Message <%= recipientName %>" required></textarea>
+      </div>
       <button class="button primary send-button" type="submit" aria-label="Send message">
         <span class="send-label">Send</span>
         <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true">
