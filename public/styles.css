@@ -994,6 +994,89 @@ textarea {
   justify-content: center;
 }
 
+.chess-match-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(320px, 2fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.chess-match-panel {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.chess-status {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--card-alt);
+}
+
+.chess-status .label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.chess-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  width: fit-content;
+}
+
+.chess-chip.light {
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+}
+
+.chess-chip.dark {
+  background: #1f2937;
+  color: #f8fafc;
+  border: 1px solid #334155;
+}
+
+.chess-chip.neutral {
+  background: rgba(124, 92, 255, 0.15);
+  color: #3b2ea3;
+  border: 1px solid rgba(124, 92, 255, 0.35);
+}
+
+.chess-legend {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.legend-square {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.legend-square.light {
+  background: #f8fafc;
+}
+
+.legend-square.dark {
+  background: #64748b;
+}
+
 .chess-board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -1001,31 +1084,98 @@ textarea {
   aspect-ratio: 1 / 1;
   border-radius: 1rem;
   overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
+  border: 2px solid #d6e4ee;
+  box-shadow: 0 18px 35px rgba(30, 58, 91, 0.25);
 }
 
 .chess-square {
   display: grid;
   place-items: center;
-  font-size: clamp(1.2rem, 3vw, 2rem);
+  position: relative;
+  font-size: clamp(1.8rem, 4.5vw, 2.8rem);
   border: none;
   background: transparent;
   cursor: pointer;
+  font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'Apple Symbols', serif;
+  text-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .chess-square.light {
-  background: #f8fafc;
-  color: #0f172a;
+  background: #dbeaf2;
+  color: #1f2937;
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08) 6px, rgba(255, 255, 255, 0) 6px, rgba(255, 255, 255, 0) 12px);
 }
 
 .chess-square.dark {
-  background: #475569;
+  background: #7ea4bb;
   color: #f8fafc;
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(15, 23, 42, 0)),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08) 6px, rgba(255, 255, 255, 0) 6px, rgba(255, 255, 255, 0) 12px);
+}
+
+.chess-square.occupied {
+  font-weight: 600;
+}
+
+.chess-square.piece-white {
+  color: #f7f4ee;
+  text-shadow:
+    0 2px 0 rgba(73, 92, 108, 0.45),
+    0 4px 10px rgba(15, 23, 42, 0.25);
+}
+
+.chess-square.piece-black {
+  color: #6b655e;
+  text-shadow:
+    0 2px 0 rgba(247, 244, 238, 0.6),
+    0 4px 10px rgba(15, 23, 42, 0.25);
 }
 
 .chess-square.highlight {
-  box-shadow: inset 0 0 0 3px rgba(124, 92, 255, 0.8);
+  box-shadow: inset 0 0 0 3px rgba(124, 92, 255, 0.7);
+}
+
+.chess-square.selected {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 3px rgba(59, 46, 163, 0.8);
+}
+
+.chess-square:focus-visible {
+  outline: 3px solid rgba(124, 92, 255, 0.7);
+  outline-offset: -3px;
+}
+
+.board-label {
+  position: absolute;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.6);
+  letter-spacing: 0.04em;
+}
+
+.board-label.rank {
+  top: 6px;
+  left: 8px;
+}
+
+.board-label.file {
+  bottom: 6px;
+  right: 8px;
+  text-transform: lowercase;
+}
+
+.chess-square.dark .board-label {
+  color: rgba(248, 250, 252, 0.7);
+}
+
+@media (max-width: 900px) {
+  .chess-match-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .auth-panel {
