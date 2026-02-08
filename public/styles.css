@@ -587,26 +587,31 @@ img {
   border-radius: 1rem;
 }
 
-.image-crop-grid {
+.image-crop-mask {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
 }
 
-.image-crop-grid span {
-  border-right: 1px solid rgba(248, 250, 252, 0.35);
-  border-bottom: 1px solid rgba(248, 250, 252, 0.35);
+.image-crop-frame.is-circle .image-crop-mask {
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0) 60%, rgba(15, 23, 42, 0.65) 62%);
 }
 
-.image-crop-grid span:nth-child(3n) {
-  border-right: none;
+.image-crop-frame.is-circle .image-crop-mask::after {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border: 2px solid rgba(248, 250, 252, 0.75);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.6);
 }
 
-.image-crop-grid span:nth-last-child(-n + 3) {
-  border-bottom: none;
+.image-crop-frame.is-banner .image-crop-mask::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  border: 2px solid rgba(248, 250, 252, 0.55);
 }
 
 .image-crop-image {
