@@ -671,8 +671,8 @@ app.post(
     });
   }),
   asyncHandler(async (req, res) => {
-    const { title, description, price, category, condition, shippingDetails } = req.body;
-    if (!title || !description || !price || !category || !condition || !shippingDetails) {
+    const { title, description, price, category, condition } = req.body;
+    if (!title || !description || !price || !category || !condition) {
       return res.render('pages/create-listing', {
         error: 'All fields are required.',
         categories: CATEGORIES,
@@ -724,6 +724,7 @@ app.post(
         form: req.body
       });
     }
+    const shippingDetails = (req.body.shippingDetails || '').trim() || 'Not specified';
     await query(
       `INSERT INTO listings (seller_id, title, description, price_cents, category, condition, image_url, shipping_details)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -793,8 +794,8 @@ app.post(
       return res.status(404).render('pages/error', { message: 'Listing not found.' });
     }
 
-    const { title, description, price, category, condition, shippingDetails } = req.body;
-    if (!title || !description || !price || !category || !condition || !shippingDetails) {
+    const { title, description, price, category, condition } = req.body;
+    if (!title || !description || !price || !category || !condition) {
       return res.render('pages/edit-listing', {
         error: 'All fields are required.',
         listing,
@@ -857,7 +858,7 @@ app.post(
            image_url = $6,
            shipping_details = $7
        WHERE id = $8 AND seller_id = $9`,
-      [title, description, priceCents, category, condition, imageUrl, shippingDetails, listingId, userId]
+      [title, description, priceCents, category, condition, imageUrl, listing.shipping_details, listingId, userId]
     );
     return res.redirect(`/listings/${listingId}`);
   })
