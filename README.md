@@ -306,6 +306,7 @@ This is a comprehensively improved version of the Sellar marketplace with extens
 - **Mobile Header**: Optimized to take minimal space while maintaining usability
 - **Profile Design**: Inspired by modern platforms (Discord, GitHub) with custom styling
 - **Performance**: All animations use GPU-accelerated properties (transform, opacity)
+- **Image Uploads**: Set `UPLOAD_DIR` to a persistent path (or configure Cloudinary) so uploaded images survive deployments.
 
 ---
 
