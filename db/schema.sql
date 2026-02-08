@@ -106,3 +106,20 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
   details TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS listing_engagement (
+  listing_id INTEGER PRIMARY KEY REFERENCES listings(id) ON DELETE CASCADE,
+  view_count INTEGER NOT NULL DEFAULT 0,
+  click_count INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS listing_favorites (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, listing_id)
+);
+
+CREATE INDEX IF NOT EXISTS listing_favorites_listing_idx ON listing_favorites (listing_id);
+CREATE INDEX IF NOT EXISTS listing_favorites_user_idx ON listing_favorites (user_id);

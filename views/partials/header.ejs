@@ -40,8 +40,10 @@
               <a href="/profile">Profile</a>
               <a href="/messages">Messages</a>
               <a href="/orders">Orders</a>
+              <a href="/dashboard/insights">Dashboard</a>
+              <a href="/favorites">Favorites</a>
               <% if (locals.isAdmin) { %>
-                <a href="/dashboard">Dashboard</a>
+                <a href="/dashboard">Admin dashboard</a>
               <% } %>
               <a href="/settings">Settings</a>
               <div class="dropdown-divider"></div>
@@ -59,6 +61,8 @@
         <% if (locals.currentUser) { %>
           <a href="/listings/new" <% if (isActivePath('/listings/new')) { %>class="active"<% } %>>Create Listing</a>
           <a href="/messages" <% if (isActivePath('/messages')) { %>class="active"<% } %>>Messages</a>
+          <a href="/dashboard/insights" <% if (isActivePath('/dashboard/insights')) { %>class="active"<% } %>>Dashboard</a>
+          <a href="/favorites" <% if (isActivePath('/favorites')) { %>class="active"<% } %>>Favorites</a>
         <% } %>
       </nav>
       
@@ -85,8 +89,10 @@
               <a href="/profile">Profile</a>
               <a href="/messages">Messages</a>
               <a href="/orders">Orders</a>
+              <a href="/dashboard/insights">Dashboard</a>
+              <a href="/favorites">Favorites</a>
               <% if (locals.isAdmin) { %>
-                <a href="/dashboard">Dashboard</a>
+                <a href="/dashboard">Admin dashboard</a>
               <% } %>
               <a href="/settings">Settings</a>
               <form method="POST" action="/auth/logout">

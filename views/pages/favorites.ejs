@@ -1,0 +1,40 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Your favorites</h1>
+      <p class="muted">Keep tabs on listings you love and revisit them anytime.</p>
+    </div>
+    <a class="button ghost" href="/marketplace">Browse marketplace</a>
+  </div>
+
+  <div class="card-grid">
+    <% if (!listings.length) { %>
+      <div class="empty-state">
+        <h3>No favorites yet</h3>
+        <p>Tap the star on any listing to add it here.</p>
+        <a class="button primary" href="/marketplace">Find listings</a>
+      </div>
+    <% } %>
+    <% listings.forEach(listing => { %>
+      <div class="card favorite-card">
+        <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+        <div class="card-body">
+          <div class="card-title">
+            <h3><%= listing.title %></h3>
+            <span class="badge ghost"><%= listing.condition %></span>
+          </div>
+          <p class="price"><%= formatPrice(listing.price_cents) %></p>
+          <p class="meta"><%= listing.category %> · Seller: <%= listing.seller_name %></p>
+          <div class="favorite-actions">
+            <a class="button ghost" href="/listings/<%= listing.id %>">View listing</a>
+            <form method="POST" action="/listings/<%= listing.id %>/favorite">
+              <button class="button primary" type="submit">Remove</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<%- include('../partials/footer') %>

@@ -1,0 +1,74 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Your listing dashboard</h1>
+      <p class="muted">Track views, buyer clicks, and favorites for every listing.</p>
+    </div>
+    <a class="button ghost" href="/favorites">View your favorites</a>
+  </div>
+
+  <div class="dashboard-stats-grid">
+    <div class="stat-card">
+      <div class="stat-number"><%= listings.length %></div>
+      <div class="stat-label">Active listings</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number"><%= stats.views %></div>
+      <div class="stat-label">Total views</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number"><%= stats.clicks %></div>
+      <div class="stat-label">Buyer clicks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number"><%= stats.favorites %></div>
+      <div class="stat-label">Favorites</div>
+    </div>
+  </div>
+
+  <div class="dashboard-table">
+    <div class="dashboard-row heading">
+      <span>Listing</span>
+      <span>Views</span>
+      <span>Clicks</span>
+      <span>Favorites</span>
+      <span>Actions</span>
+    </div>
+    <% if (!listings.length) { %>
+      <div class="empty-state">
+        <h3>No listings yet</h3>
+        <p>Create your first listing to start tracking performance.</p>
+        <a class="button primary" href="/listings/new">Create listing</a>
+      </div>
+    <% } %>
+    <% listings.forEach(listing => { %>
+      <div class="dashboard-row">
+        <div class="dashboard-listing">
+          <img src="<%= listing.image_url %>" alt="<%= listing.title %>" />
+          <div>
+            <div class="dashboard-title"><%= listing.title %></div>
+            <div class="meta"><%= formatPrice(listing.price_cents) %></div>
+          </div>
+        </div>
+        <div class="dashboard-metric">
+          <span class="metric-label">Views</span>
+          <span><%= listing.view_count %></span>
+        </div>
+        <div class="dashboard-metric">
+          <span class="metric-label">Clicks</span>
+          <span><%= listing.click_count %></span>
+        </div>
+        <div class="dashboard-metric">
+          <span class="metric-label">Favorites</span>
+          <span><%= listing.favorite_count %></span>
+        </div>
+        <div class="dashboard-actions">
+          <a class="button ghost" href="/listings/<%= listing.id %>">View</a>
+          <a class="button ghost" href="/listings/<%= listing.id %>/edit">Edit</a>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</section>
+<%- include('../partials/footer') %>

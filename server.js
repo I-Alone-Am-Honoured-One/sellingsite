@@ -93,9 +93,32 @@ ensureChessTables().catch((error) => {
 ensureAdminAuditTable().catch((error) => {
   console.error('Failed to ensure admin audit table exists:', error);
 });
+ensureListingEngagementTables().catch((error) => {
+  console.error('Failed to ensure listing engagement tables exist:', error);
+});
 
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+async function incrementListingView(listingId) {
+  await query(
+    `INSERT INTO listing_engagement (listing_id, view_count, click_count)
+     VALUES ($1, 1, 0)
+     ON CONFLICT (listing_id)
+     DO UPDATE SET view_count = listing_engagement.view_count + 1, updated_at = NOW()`,
+    [listingId]
+  );
+}
+
+async function incrementListingClick(listingId) {
+  await query(
+    `INSERT INTO listing_engagement (listing_id, view_count, click_count)
+     VALUES ($1, 0, 1)
+     ON CONFLICT (listing_id)
+     DO UPDATE SET click_count = listing_engagement.click_count + 1, updated_at = NOW()`,
+    [listingId]
+  );
 }
 
 async function ensureSessionsTable() {
@@ -155,6 +178,31 @@ async function ensureAdminAuditTable() {
       details TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`
+  );
+}
+
+async function ensureListingEngagementTables() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS listing_engagement (
+      listing_id INTEGER PRIMARY KEY REFERENCES listings(id) ON DELETE CASCADE,
+      view_count INTEGER NOT NULL DEFAULT 0,
+      click_count INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+  );
+  await query(
+    `CREATE TABLE IF NOT EXISTS listing_favorites (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (user_id, listing_id)
+    )`
+  );
+  await query(
+    'CREATE INDEX IF NOT EXISTS listing_favorites_listing_idx ON listing_favorites (listing_id)'
+  );
+  await query(
+    'CREATE INDEX IF NOT EXISTS listing_favorites_user_idx ON listing_favorites (user_id)'
   );
 }
 
@@ -471,6 +519,34 @@ async function getSettingsPayload(userId) {
     [userId]
   );
   return { user, listings };
+}
+
+async function getUserDashboardPayload(userId) {
+  const { rows: listings } = await query(
+    `SELECT listings.*,
+            COALESCE(engagement.view_count, 0) AS view_count,
+            COALESCE(engagement.click_count, 0) AS click_count,
+            COUNT(favorites.user_id) AS favorite_count
+     FROM listings
+     LEFT JOIN listing_engagement AS engagement ON engagement.listing_id = listings.id
+     LEFT JOIN listing_favorites AS favorites ON favorites.listing_id = listings.id
+     WHERE listings.seller_id = $1
+     GROUP BY listings.id, engagement.view_count, engagement.click_count
+     ORDER BY listings.created_at DESC`,
+    [userId]
+  );
+
+  const stats = listings.reduce(
+    (totals, listing) => {
+      totals.views += Number(listing.view_count || 0);
+      totals.clicks += Number(listing.click_count || 0);
+      totals.favorites += Number(listing.favorite_count || 0);
+      return totals;
+    },
+    { views: 0, clicks: 0, favorites: 0 }
+  );
+
+  return { listings, stats };
 }
 
 async function getAdminDashboardPayload() {
@@ -1255,7 +1331,55 @@ app.get(
     if (!listing) {
       return res.status(404).render('pages/error', { message: 'Listing not found.' });
     }
-    res.render('pages/listing-detail', { listing, formatPrice });
+    if (!res.locals.currentUser || res.locals.currentUser.id !== listing.seller_id) {
+      await incrementListingView(listing.id);
+    }
+    const { rows: favoriteCountRows } = await query(
+      'SELECT COUNT(*) AS count FROM listing_favorites WHERE listing_id = $1',
+      [listing.id]
+    );
+    const favoriteCount = Number(favoriteCountRows[0].count || 0);
+    let isFavorited = false;
+    if (res.locals.currentUser) {
+      const { rows: favoriteRows } = await query(
+        'SELECT 1 FROM listing_favorites WHERE listing_id = $1 AND user_id = $2 LIMIT 1',
+        [listing.id, res.locals.currentUser.id]
+      );
+      isFavorited = Boolean(favoriteRows[0]);
+    }
+    res.render('pages/listing-detail', { listing, formatPrice, favoriteCount, isFavorited });
+  })
+);
+
+app.post(
+  '/listings/:id/favorite',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const listingId = req.params.id;
+    const { rows } = await query('SELECT * FROM listings WHERE id = $1', [listingId]);
+    const listing = rows[0];
+    if (!listing) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    if (listing.seller_id === res.locals.currentUser.id) {
+      return res.status(400).render('pages/error', { message: 'You cannot favorite your own listing.' });
+    }
+    const { rows: favoriteRows } = await query(
+      'SELECT 1 FROM listing_favorites WHERE user_id = $1 AND listing_id = $2',
+      [res.locals.currentUser.id, listing.id]
+    );
+    if (favoriteRows[0]) {
+      await query('DELETE FROM listing_favorites WHERE user_id = $1 AND listing_id = $2', [
+        res.locals.currentUser.id,
+        listing.id
+      ]);
+    } else {
+      await query('INSERT INTO listing_favorites (user_id, listing_id) VALUES ($1, $2)', [
+        res.locals.currentUser.id,
+        listing.id
+      ]);
+    }
+    return res.redirect(req.get('referer') || `/listings/${listing.id}`);
   })
 );
 
@@ -1273,6 +1397,7 @@ app.post(
     if (listing.seller_id === buyerId) {
       return res.status(400).render('pages/error', { message: 'You cannot buy your own listing.' });
     }
+    await incrementListingClick(listing.id);
     const { rows: existingOrders } = await query(
       'SELECT id FROM orders WHERE listing_id = $1 AND buyer_id = $2 LIMIT 1',
       [listingId, buyerId]
@@ -1426,6 +1551,7 @@ app.post(
     if (listing.seller_id === res.locals.currentUser.id) {
       return res.status(400).render('pages/error', { message: 'You cannot message yourself.' });
     }
+    await incrementListingClick(listing.id);
     const { rows: existingThreads } = await query(
       'SELECT id FROM threads WHERE listing_id = $1 AND buyer_id = $2 LIMIT 1',
       [listingId, res.locals.currentUser.id]
@@ -1725,6 +1851,33 @@ app.post(
 
     const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
     res.render('pages/settings', { user, listings, formatPrice, error, success });
+  })
+);
+
+app.get(
+  '/dashboard/insights',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { listings, stats } = await getUserDashboardPayload(res.locals.currentUser.id);
+    res.render('pages/user-dashboard', { listings, stats, formatPrice });
+  })
+);
+
+app.get(
+  '/favorites',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const userId = res.locals.currentUser.id;
+    const { rows: listings } = await query(
+      `SELECT listings.*, users.username AS seller_name
+       FROM listing_favorites
+       JOIN listings ON listing_favorites.listing_id = listings.id
+       JOIN users ON listings.seller_id = users.id
+       WHERE listing_favorites.user_id = $1
+       ORDER BY listing_favorites.created_at DESC`,
+      [userId]
+    );
+    res.render('pages/favorites', { listings, formatPrice });
   })
 );
 
