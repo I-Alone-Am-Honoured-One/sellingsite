@@ -1,10 +1,19 @@
 <%- include('../partials/header') %>
 <section class="container section">
   <div class="thread-header">
-    <div>
+    <div class="thread-identity">
       <% const recipientName = thread.buyer_id === currentUser.id ? thread.seller_name : thread.buyer_name; %>
-      <h1>Chat with <%= recipientName %></h1>
-      <p class="meta"><%= thread.listing_title || 'General inquiry' %></p>
+      <% const recipientInitial = (recipientName || '?').charAt(0).toUpperCase(); %>
+      <div class="thread-avatar"><%= recipientInitial %></div>
+      <div class="thread-meta">
+        <p class="thread-label">Chatting with</p>
+        <h1><%= recipientName %></h1>
+        <% if (thread.listing_id) { %>
+          <a class="thread-listing-link" href="/listings/<%= thread.listing_id %>"><%= thread.listing_title || 'View listing' %></a>
+        <% } else { %>
+          <span class="meta">General inquiry</span>
+        <% } %>
+      </div>
     </div>
     <a class="link" href="/messages">Back to inbox</a>
   </div>

@@ -2122,6 +2122,51 @@ textarea {
   gap: 1rem;
 }
 
+.thread-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.thread-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--gradient-1);
+  color: white;
+  font-weight: 700;
+  font-size: 1.4rem;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-md);
+}
+
+.thread-meta h1 {
+  margin: 0;
+}
+
+.thread-label {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.thread-listing-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.thread-listing-link:hover {
+  color: #7c5cff;
+}
+
 .thread-messages {
   flex: 1;
   padding: 1.5rem;
@@ -2653,6 +2698,22 @@ textarea {
 
   .thread-list {
     max-height: 300px;
+  }
+
+  .thread-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .thread-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    font-size: 1.2rem;
+  }
+
+  .thread-meta h1 {
+    font-size: 1.35rem;
   }
 
   .message-input {
