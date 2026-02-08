@@ -2619,35 +2619,32 @@ textarea {
 
   .message-input {
     padding: 1rem;
-    align-items: center;
+    align-items: flex-end;
   }
 
   .message-input textarea {
-    min-height: 44px;
-    max-height: 120px;
-    padding: 0.55rem 0.75rem;
-    font-size: 0.95rem;
-    line-height: 1.35;
-    resize: none;
-    overflow-y: auto;
+    min-height: 56px;
+    max-height: 160px;
+    padding: 0.65rem 0.85rem;
+    font-size: 1rem;
+    line-height: 1.4;
   }
 
   .message-input .send-button {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
     padding: 0;
     border-radius: 999px;
-    gap: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0;
   }
 
-  .message-input .send-label {
-    display: none;
-  }
-
-  .message-input .send-icon {
-    width: 18px;
-    height: 18px;
+  .message-input .send-button::before {
+    content: '➤';
+    font-size: 1.1rem;
+    line-height: 1;
   }
 
   .order-card {

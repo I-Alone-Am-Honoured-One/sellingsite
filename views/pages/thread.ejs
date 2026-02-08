@@ -27,6 +27,10 @@
       </button>
     </form>
   </div>
+  <form class="message-input" method="POST" action="/messages/<%= thread.id %>">
+    <textarea name="body" rows="3" placeholder="Type your message" required></textarea>
+    <button class="button primary send-button" type="submit" aria-label="Send message">Send</button>
+  </form>
 </section>
 
 <script>
