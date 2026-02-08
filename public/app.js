@@ -74,9 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="image-crop-frame">
           <img class="image-crop-image" alt="Crop preview" />
-          <div class="image-crop-grid">
-            ${'<span></span>'.repeat(9)}
-          </div>
+          <div class="image-crop-mask" aria-hidden="true"></div>
         </div>
         <div class="image-crop-controls">
           <label>
@@ -101,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const cropReset = cropModal.querySelector('.image-crop-reset');
   const cropCancel = cropModal.querySelector('.image-crop-cancel');
   const cropConfirm = cropModal.querySelector('.image-crop-confirm');
+  const activePointers = new Map();
+  let pinchState = null;
 
   const parseAspect = (value) => {
     if (!value) return null;
@@ -166,6 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
     cropImage.src = '';
     cropImage.style.transform = '';
     cropImage.classList.remove('is-dragging');
+    activePointers.clear();
+    pinchState = null;
     activeCrop = null;
   };
 
@@ -175,6 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const previewUrl = reader.result;
       cropImage.src = previewUrl;
       cropModal.hidden = false;
+      cropFrame.classList.toggle('is-circle', input.name === 'avatar');
+      cropFrame.classList.toggle('is-banner', input.name === 'background');
+      cropImage.style.transform = 'translate(0px, 0px) scale(1)';
 
       const frameWidth = cropFrame.clientWidth;
       const frameHeight = frameWidth / aspect;
@@ -207,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.translateX = (frameWidth - state.displayWidth) / 2;
         state.translateY = (frameHeight - state.displayHeight) / 2;
         cropZoom.value = '1';
-        updateCropTransform();
+        centerCrop();
       };
       imageEl.src = previewUrl;
     };
@@ -235,6 +240,39 @@ document.addEventListener('DOMContentLoaded', () => {
     cropImage.style.transform = `translate(${activeCrop.translateX}px, ${activeCrop.translateY}px) scale(${scale})`;
   };
 
+  const centerCrop = () => {
+    if (!activeCrop) return;
+    const frameWidth = cropFrame.clientWidth;
+    const frameHeight = cropFrame.clientHeight;
+    const scale = activeCrop.baseScale * activeCrop.zoom;
+    const displayWidth = activeCrop.originalWidth * scale;
+    const displayHeight = activeCrop.originalHeight * scale;
+    activeCrop.translateX = (frameWidth - displayWidth) / 2;
+    activeCrop.translateY = (frameHeight - displayHeight) / 2;
+    updateCropTransform();
+  };
+
+  const applyZoom = (nextZoom, anchorX, anchorY) => {
+    if (!activeCrop) return;
+    const frameRect = cropFrame.getBoundingClientRect();
+    const localX = anchorX - frameRect.left;
+    const localY = anchorY - frameRect.top;
+    const minZoom = Number(cropZoom.min || 1);
+    const maxZoom = Number(cropZoom.max || 3);
+    const clampedZoom = clamp(nextZoom, minZoom, maxZoom);
+
+    const prevScale = activeCrop.baseScale * activeCrop.zoom;
+    const nextScale = activeCrop.baseScale * clampedZoom;
+    const imageX = (localX - activeCrop.translateX) / prevScale;
+    const imageY = (localY - activeCrop.translateY) / prevScale;
+
+    activeCrop.zoom = clampedZoom;
+    activeCrop.translateX = localX - imageX * nextScale;
+    activeCrop.translateY = localY - imageY * nextScale;
+    cropZoom.value = clampedZoom.toFixed(2);
+    updateCropTransform();
+  };
+
   let isDragging = false;
   let dragStart = { x: 0, y: 0 };
   let dragOrigin = { x: 0, y: 0 };
@@ -248,14 +286,52 @@ document.addEventListener('DOMContentLoaded', () => {
     dragOrigin = { x: activeCrop.translateX, y: activeCrop.translateY };
   });
 
+  cropFrame.addEventListener('pointerdown', (e) => {
+    if (!activeCrop || e.pointerType !== 'touch') return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    cropFrame.setPointerCapture(e.pointerId);
+    if (activePointers.size === 2) {
+      const [first, second] = Array.from(activePointers.values());
+      const distance = Math.hypot(second.x - first.x, second.y - first.y);
+      pinchState = { distance, zoom: activeCrop.zoom };
+      isDragging = false;
+      cropImage.classList.remove('is-dragging');
+    }
+  });
+
   cropImage.addEventListener('pointermove', (e) => {
     if (!activeCrop || !isDragging) return;
+    if (activePointers.size > 1) return;
     const deltaX = e.clientX - dragStart.x;
     const deltaY = e.clientY - dragStart.y;
     activeCrop.translateX = dragOrigin.x + deltaX;
     activeCrop.translateY = dragOrigin.y + deltaY;
     updateCropTransform();
   });
+
+  cropFrame.addEventListener('pointermove', (e) => {
+    if (!activeCrop || e.pointerType !== 'touch') return;
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePointers.size !== 2 || !pinchState) return;
+    const [first, second] = Array.from(activePointers.values());
+    const distance = Math.hypot(second.x - first.x, second.y - first.y);
+    const midpointX = (first.x + second.x) / 2;
+    const midpointY = (first.y + second.y) / 2;
+    const zoomFactor = distance / pinchState.distance;
+    applyZoom(pinchState.zoom * zoomFactor, midpointX, midpointY);
+  });
+
+  const releasePointer = (e) => {
+    if (e.pointerType !== 'touch') return;
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) {
+      pinchState = null;
+    }
+  };
+
+  cropFrame.addEventListener('pointerup', releasePointer);
+  cropFrame.addEventListener('pointercancel', releasePointer);
 
   const stopDragging = (e) => {
     if (!activeCrop || !isDragging) return;
@@ -273,17 +349,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   cropZoom.addEventListener('input', (e) => {
     if (!activeCrop) return;
-    activeCrop.zoom = Number(e.target.value);
-    updateCropTransform();
+    const frameRect = cropFrame.getBoundingClientRect();
+    const anchorX = frameRect.left + frameRect.width / 2;
+    const anchorY = frameRect.top + frameRect.height / 2;
+    applyZoom(Number(e.target.value), anchorX, anchorY);
   });
 
   cropReset.addEventListener('click', () => {
     if (!activeCrop) return;
     activeCrop.zoom = 1;
     cropZoom.value = '1';
-    activeCrop.translateX = (cropFrame.clientWidth - activeCrop.displayWidth) / 2;
-    activeCrop.translateY = (cropFrame.clientHeight - activeCrop.displayHeight) / 2;
-    updateCropTransform();
+    centerCrop();
   });
 
   cropCancel.addEventListener('click', () => {
