@@ -38,7 +38,9 @@ if (isCloudinaryConfigured) {
   });
 }
 
-const uploadDir = path.join(__dirname, 'public', 'uploads');
+const uploadDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, 'public', 'uploads');
 if (!isCloudinaryConfigured && !fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -80,6 +82,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+if (!isCloudinaryConfigured) {
+  app.use('/uploads', express.static(uploadDir));
+}
 
 ensureSessionsTable().catch((error) => {
   console.error('Failed to ensure sessions table exists:', error);
