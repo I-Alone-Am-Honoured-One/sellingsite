@@ -2173,7 +2173,7 @@ textarea {
 }
 
 .message-input textarea {
-  min-height: 110px;
+  min-height: 72px;
   resize: vertical;
 }
 
@@ -2661,7 +2661,7 @@ textarea {
   }
 
   .message-input textarea {
-    min-height: 56px;
+    min-height: 44px;
     max-height: 160px;
     padding: 0.65rem 0.85rem;
     font-size: 1rem;
@@ -2676,13 +2676,15 @@ textarea {
     border-radius: 999px;
     display: grid;
     place-items: center;
-    font-size: 0;
   }
 
-  .message-input .send-button::before {
-    content: '➤';
-    font-size: 1.1rem;
-    line-height: 1;
+  .message-input .send-label {
+    display: none;
+  }
+
+  .message-input .send-icon {
+    width: 20px;
+    height: 20px;
   }
 
   .order-card {
