@@ -138,7 +138,6 @@ img {
   background: rgba(10, 15, 30, 0.75);
   border: 1px solid rgba(124, 92, 255, 0.35);
   box-shadow: 0 0 40px rgba(124, 92, 255, 0.25), 0 0 80px rgba(34, 211, 238, 0.2);
-  animation: loaderFloat 3s ease-in-out infinite;
 }
 
 .loader-ring {
@@ -190,17 +189,6 @@ img {
   letter-spacing: 0.08em;
 }
 
-.loader-title::after {
-  content: '';
-  display: block;
-  width: 120px;
-  height: 3px;
-  margin: 0.65rem auto 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(124, 92, 255, 0.9), transparent);
-  box-shadow: 0 0 14px rgba(124, 92, 255, 0.7);
-}
-
 @keyframes loaderSpin {
   to {
     transform: rotate(360deg);
@@ -221,15 +209,6 @@ img {
   50% {
     opacity: 1;
     transform: scaleX(1);
-  }
-}
-
-@keyframes loaderFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
   }
 }
 
