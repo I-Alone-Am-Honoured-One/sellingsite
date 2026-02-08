@@ -399,12 +399,49 @@ img {
   overflow: hidden;
   box-shadow: 0 0 0 6px var(--card), var(--shadow-lg);
   border: 2px solid var(--primary);
+  position: relative;
 }
 
 .profile-avatar-large img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.profile-preview .preview-clear {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  opacity: 0.85;
+}
+
+.profile-preview .preview-clear:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+}
+
+.profile-preview .preview-clear:focus-visible {
+  outline: 2px solid rgba(124, 92, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.profile-preview .preview-clear-avatar {
+  top: -6px;
+  right: -6px;
 }
 
 .profile-info-section {
@@ -1983,17 +2020,19 @@ textarea {
 
 /* ==================== FOOTER ==================== */
 .site-footer {
-  background: rgba(10, 14, 26, 0.9);
-  border-top: 1px solid rgba(139, 92, 246, 0.3);
-  padding: 2rem 0 1.5rem;
+  background: radial-gradient(circle at top, rgba(124, 92, 255, 0.25), transparent 55%),
+    linear-gradient(135deg, rgba(10, 14, 26, 0.92), rgba(15, 23, 42, 0.96));
+  border-top: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.45);
+  padding: 2.75rem 0 2rem;
   margin-top: 3rem;
 }
 
 .footer-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  text-align: center;
+  gap: 2rem;
+  text-align: left;
 }
 
 .footer-section h4 {
@@ -2002,6 +2041,7 @@ textarea {
   letter-spacing: 0.04em;
   color: #a78bfa;
   margin-bottom: 0.75rem;
+  text-transform: uppercase;
 }
 
 .footer-section ul {
@@ -2010,13 +2050,15 @@ textarea {
 }
 
 .footer-section p {
-  color: #cbd5f5;
+  color: #d0d7ef;
   font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .footer-disclaimer {
   color: #94a3b8;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .footer-section a {
@@ -2030,7 +2072,7 @@ textarea {
 
 .socials {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1rem;
   margin-top: 0.75rem;
   color: #94a3b8;
@@ -2045,7 +2087,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .footer-notes li::before {
@@ -2055,11 +2097,11 @@ textarea {
 
 .footer-bottom {
   text-align: center;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
   border-top: 1px solid rgba(139, 92, 246, 0.3);
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 /* ==================== MOBILE RESPONSIVE ==================== */
