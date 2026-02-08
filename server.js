@@ -112,8 +112,6 @@ async function ensureUserAuthColumns() {
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS google_email TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_id TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_profile_url TEXT');
-  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_url TEXT');
-  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_color TEXT');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique ON users (google_id)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique ON users (google_email)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_steam_id_unique ON users (steam_id)');
@@ -579,10 +577,7 @@ app.get(
   asyncHandler(async (req, res) => {
     const config = getGoogleConfig(req);
     if (!config) {
-      return res.status(500).render('pages/error', {
-        message:
-          'Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your environment (and set GOOGLE_REDIRECT_URI if needed).'
-      });
+      return res.status(500).render('pages/error', { message: 'Google login is not configured.' });
     }
     const action = req.query.action === 'link' ? 'link' : 'signin';
     if (action === 'link') {
@@ -611,10 +606,7 @@ app.get(
   asyncHandler(async (req, res) => {
     const config = getGoogleConfig(req);
     if (!config) {
-      return res.status(500).render('pages/error', {
-        message:
-          'Google login is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your environment (and set GOOGLE_REDIRECT_URI if needed).'
-      });
+      return res.status(500).render('pages/error', { message: 'Google login is not configured.' });
     }
     if (req.query.error) {
       return res.status(400).render('pages/error', { message: 'Google sign-in was cancelled.' });

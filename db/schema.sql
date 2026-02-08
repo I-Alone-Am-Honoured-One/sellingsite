@@ -11,8 +11,6 @@ CREATE TABLE IF NOT EXISTS users (
   google_email TEXT UNIQUE,
   steam_id TEXT UNIQUE,
   steam_profile_url TEXT,
-  profile_background_url TEXT,
-  profile_background_color TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -929,35 +929,6 @@ textarea {
   margin-top: 1rem;
 }
 
-.profile-editor {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 1.5rem;
-  align-items: start;
-  margin-bottom: 1.5rem;
-}
-
-.profile-avatar.small {
-  width: 110px;
-  height: 110px;
-  border-radius: 1.25rem;
-}
-
-.profile-avatar.small img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.profile-avatar.small span {
-  font-size: 2.25rem;
-}
-
-.profile-editor-fields {
-  display: grid;
-  gap: 1rem;
-}
-
 .profile-chess-section {
   margin-top: 2rem;
 }
