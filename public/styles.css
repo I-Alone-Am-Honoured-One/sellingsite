@@ -3339,7 +3339,26 @@ textarea {
   }
 
   .profile-banner {
-    height: 120px;
+    height: 160px;
+  }
+
+  .profile-header-section.profile-preview .profile-banner {
+    height: 160px;
+  }
+
+  .profile-header-section.profile-preview .profile-header-content {
+    padding: 0 1.75rem 1.75rem;
+    margin-top: -46px;
+  }
+
+  .profile-header-section.profile-preview .profile-avatar-large {
+    width: 110px;
+    height: 110px;
+    font-size: 2.6rem;
+  }
+
+  .profile-header-section.profile-preview .profile-display-name {
+    font-size: 1.6rem;
   }
 
   .profile-header-section.profile-preview .profile-banner {
