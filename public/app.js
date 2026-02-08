@@ -88,9 +88,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existing) {
       existing.remove();
     }
+    const preview = document.createElement('div');
+    preview.className = 'upload-preview';
     preview.innerHTML = `
       <img src="${previewUrl}" alt="Preview" loading="lazy" />
     `;
+    input.parentElement.appendChild(preview);
   };
 
   const setProfilePreviewImage = (input, previewUrl) => {
