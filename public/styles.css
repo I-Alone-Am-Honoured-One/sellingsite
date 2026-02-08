@@ -455,7 +455,8 @@ img {
   border: 1px solid var(--border);
   border-radius: 1.5rem;
   overflow: hidden;
-  margin-bottom: 2rem;
+  margin: 0 auto 2rem;
+  max-width: 980px;
   box-shadow: var(--shadow-md);
 }
 
