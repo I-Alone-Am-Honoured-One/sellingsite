@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
   google_email TEXT UNIQUE,
   steam_id TEXT UNIQUE,
   steam_profile_url TEXT,
+  banned BOOLEAN DEFAULT FALSE,
+  verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -92,5 +94,15 @@ CREATE TABLE IF NOT EXISTS chess_matches (
   id SERIAL PRIMARY KEY,
   white_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   black_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+  id SERIAL PRIMARY KEY,
+  admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id INTEGER,
+  details TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

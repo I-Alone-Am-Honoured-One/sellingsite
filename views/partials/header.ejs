@@ -40,6 +40,9 @@
               <a href="/profile">Profile</a>
               <a href="/messages">Messages</a>
               <a href="/orders">Orders</a>
+              <% if (locals.isAdmin) { %>
+                <a href="/dashboard">Dashboard</a>
+              <% } %>
               <a href="/settings">Settings</a>
               <div class="dropdown-divider"></div>
               <form method="POST" action="/auth/logout">
@@ -82,6 +85,9 @@
               <a href="/profile">Profile</a>
               <a href="/messages">Messages</a>
               <a href="/orders">Orders</a>
+              <% if (locals.isAdmin) { %>
+                <a href="/dashboard">Dashboard</a>
+              <% } %>
               <a href="/settings">Settings</a>
               <form method="POST" action="/auth/logout">
                 <button class="link-button" type="submit">Log out</button>

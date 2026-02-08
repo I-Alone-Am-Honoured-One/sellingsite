@@ -1,0 +1,115 @@
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h1>Admin dashboard</h1>
+        <p class="muted">Manage marketplace accounts and listings.</p>
+      </div>
+    </div>
+
+    <% if (error) { %>
+      <div class="error"><%= error %></div>
+    <% } %>
+    <% if (success) { %>
+      <div class="success"><%= success %></div>
+    <% } %>
+
+    <div class="admin-grid">
+      <div class="form-card admin-card">
+        <div>
+          <h2>Accounts</h2>
+          <p class="muted">Update credentials or remove accounts that violate policies.</p>
+        </div>
+        <div class="admin-list">
+          <% users.forEach((user) => { %>
+            <% const isPrimaryAdmin = user.username === 'Admin' && user.email.toLowerCase() === 'mariusjon101@gmail.com'; %>
+            <div class="admin-item">
+              <div class="admin-item-header">
+                <div>
+                  <h3><%= user.username %></h3>
+                  <p class="muted"><%= user.email %></p>
+                </div>
+                <div class="admin-meta">
+                  <span>Joined <%= new Date(user.created_at).toLocaleDateString() %></span>
+                </div>
+              </div>
+              <form class="admin-form" method="POST" action="/dashboard/users/<%= user.id %>/update">
+                <div class="form-row">
+                  <label>
+                    New username
+                    <input type="text" name="username" placeholder="Leave blank to keep <%= user.username %>" />
+                  </label>
+                  <label>
+                    New email
+                    <input type="email" name="email" placeholder="Leave blank to keep <%= user.email %>" />
+                  </label>
+                  <label>
+                    New password
+                    <input type="password" name="password" placeholder="Leave blank to keep current password" />
+                  </label>
+                </div>
+                <div class="admin-actions">
+                  <button class="button primary small" type="submit">Update credentials</button>
+                </div>
+              </form>
+              <form class="admin-delete" method="POST" action="/dashboard/users/<%= user.id %>/delete">
+                <button
+                  class="button danger small"
+                  type="submit"
+                  <% if (isPrimaryAdmin) { %>disabled aria-disabled="true"<% } %>
+                  onclick="return confirm('Delete the account for <%= user.username %>? This cannot be undone.')"
+                >
+                  Delete account
+                </button>
+                <% if (isPrimaryAdmin) { %>
+                  <span class="muted">Primary admin account is protected.</span>
+                <% } %>
+              </form>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="form-card admin-card">
+        <div>
+          <h2>Listings</h2>
+          <p class="muted">Remove listings that are no longer active or violate marketplace rules.</p>
+        </div>
+        <div class="admin-list">
+          <% if (!listings.length) { %>
+            <p class="muted">No listings available.</p>
+          <% } %>
+          <% listings.forEach((listing) => { %>
+            <div class="admin-item">
+              <div class="admin-item-header">
+                <div>
+                  <h3><%= listing.title %></h3>
+                  <p class="muted">Seller: <%= listing.seller_name %></p>
+                </div>
+                <div class="admin-meta">
+                  <span><%= formatPrice(listing.price_cents) %></span>
+                </div>
+              </div>
+              <div class="admin-item-footer">
+                <span class="muted"><%= listing.category %> · <%= listing.condition %></span>
+                <form method="POST" action="/dashboard/listings/<%= listing.id %>/delete">
+                  <button
+                    class="button danger small"
+                    type="submit"
+                    onclick="return confirm('Delete the listing \"<%= listing.title %>\"?')"
+                  >
+                    Delete listing
+                  </button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

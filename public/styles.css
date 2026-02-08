@@ -399,12 +399,49 @@ img {
   overflow: hidden;
   box-shadow: 0 0 0 6px var(--card), var(--shadow-lg);
   border: 2px solid var(--primary);
+  position: relative;
 }
 
 .profile-avatar-large img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.profile-preview .preview-clear {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  opacity: 0.85;
+}
+
+.profile-preview .preview-clear:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+}
+
+.profile-preview .preview-clear:focus-visible {
+  outline: 2px solid rgba(124, 92, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.profile-preview .preview-clear-avatar {
+  top: -6px;
+  right: -6px;
 }
 
 .profile-info-section {
@@ -883,6 +920,74 @@ textarea {
   font-weight: 600;
 }
 
+/* ==================== ADMIN DASHBOARD ==================== */
+.admin-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.admin-card h2 {
+  margin: 0;
+}
+
+.admin-list {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.admin-item {
+  border: 1px solid var(--outline);
+  background: var(--card);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.admin-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-delete {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 900px) {
+  .admin-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
 .form-footer a:hover {
   color: var(--primary-dark);
   text-decoration: underline;
@@ -1091,13 +1196,12 @@ textarea {
 .chess-square {
   display: grid;
   place-items: center;
-  position: relative;
-  font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
   border: none;
   background: transparent;
   cursor: pointer;
   font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'Apple Symbols', serif;
-  text-shadow: 0 2px 8px rgba(15, 23, 42, 0.25);
+  text-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1110,7 +1214,7 @@ textarea {
 }
 
 .chess-square.dark {
-  background: #7ea4bb;
+  background: #64748b;
   color: #f8fafc;
   background-image:
     linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(15, 23, 42, 0)),
@@ -1147,29 +1251,6 @@ textarea {
 .chess-square:focus-visible {
   outline: 3px solid rgba(124, 92, 255, 0.7);
   outline-offset: -3px;
-}
-
-.board-label {
-  position: absolute;
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: rgba(15, 23, 42, 0.6);
-  letter-spacing: 0.04em;
-}
-
-.board-label.rank {
-  top: 6px;
-  left: 8px;
-}
-
-.board-label.file {
-  bottom: 6px;
-  right: 8px;
-  text-transform: lowercase;
-}
-
-.chess-square.dark .board-label {
-  color: rgba(248, 250, 252, 0.7);
 }
 
 @media (max-width: 900px) {
@@ -2133,17 +2214,19 @@ textarea {
 
 /* ==================== FOOTER ==================== */
 .site-footer {
-  background: rgba(10, 14, 26, 0.9);
-  border-top: 1px solid rgba(139, 92, 246, 0.3);
-  padding: 2rem 0 1.5rem;
+  background: radial-gradient(circle at top, rgba(124, 92, 255, 0.25), transparent 55%),
+    linear-gradient(135deg, rgba(10, 14, 26, 0.92), rgba(15, 23, 42, 0.96));
+  border-top: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.45);
+  padding: 2.75rem 0 2rem;
   margin-top: 3rem;
 }
 
 .footer-content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  text-align: center;
+  gap: 2rem;
+  text-align: left;
 }
 
 .footer-section h4 {
@@ -2152,6 +2235,7 @@ textarea {
   letter-spacing: 0.04em;
   color: #a78bfa;
   margin-bottom: 0.75rem;
+  text-transform: uppercase;
 }
 
 .footer-section ul {
@@ -2160,13 +2244,15 @@ textarea {
 }
 
 .footer-section p {
-  color: #cbd5f5;
+  color: #d0d7ef;
   font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .footer-disclaimer {
   color: #94a3b8;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .footer-section a {
@@ -2180,7 +2266,7 @@ textarea {
 
 .socials {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1rem;
   margin-top: 0.75rem;
   color: #94a3b8;
@@ -2195,7 +2281,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .footer-notes li::before {
@@ -2205,11 +2291,11 @@ textarea {
 
 .footer-bottom {
   text-align: center;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
   border-top: 1px solid rgba(139, 92, 246, 0.3);
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 /* ==================== MOBILE RESPONSIVE ==================== */
@@ -2267,6 +2353,7 @@ textarea {
     width: 100%;
     justify-content: center;
     gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .header-actions .header-link,
@@ -2552,6 +2639,49 @@ textarea {
 }
 
 @media (max-width: 480px) {
+  :root {
+    --header-height: 130px;
+  }
+
+  .header-content {
+    gap: 0.5rem;
+    padding: 0.65rem 0;
+  }
+
+  .header-row-top {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .logo {
+    font-size: 1.2rem;
+  }
+
+  .nav-links {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-links a {
+    white-space: nowrap;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions .header-link,
+  .header-actions .header-button {
+    width: 100%;
+  }
+
   .site-footer {
     padding: 1.5rem 0 1rem;
     margin-top: 2rem;

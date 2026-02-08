@@ -90,6 +90,9 @@ ensureUserAuthColumns().catch((error) => {
 ensureChessTables().catch((error) => {
   console.error('Failed to ensure chess tables exist:', error);
 });
+ensureAdminAuditTable().catch((error) => {
+  console.error('Failed to ensure admin audit table exists:', error);
+});
 
 function formatPrice(cents) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -114,6 +117,8 @@ async function ensureUserAuthColumns() {
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS steam_profile_url TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_url TEXT');
   await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_background_color TEXT');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS banned BOOLEAN DEFAULT FALSE');
+  await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT FALSE');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_id_unique ON users (google_id)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_google_email_unique ON users (google_email)');
   await query('CREATE UNIQUE INDEX IF NOT EXISTS users_steam_id_unique ON users (steam_id)');
@@ -134,6 +139,20 @@ async function ensureChessTables() {
       id SERIAL PRIMARY KEY,
       white_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       black_player_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`
+  );
+}
+
+async function ensureAdminAuditTable() {
+  await query(
+    `CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id INTEGER,
+      details TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`
   );
@@ -411,6 +430,22 @@ async function requireAuth(req, res, next) {
   next();
 }
 
+function isAdminUser(user) {
+  return (
+    user &&
+    user.username === 'Admin' &&
+    user.email &&
+    user.email.toLowerCase() === 'mariusjon101@gmail.com'
+  );
+}
+
+function requireAdmin(req, res, next) {
+  if (!isAdminUser(res.locals.currentUser)) {
+    return res.status(403).render('pages/error', { message: 'You do not have access to this page.' });
+  }
+  next();
+}
+
 async function getProfilePayload(userId) {
   const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
   const user = userRows[0];
@@ -438,10 +473,24 @@ async function getSettingsPayload(userId) {
   return { user, listings };
 }
 
+async function getAdminDashboardPayload() {
+  const { rows: users } = await query(
+    'SELECT id, username, email, created_at FROM users ORDER BY created_at DESC'
+  );
+  const { rows: listings } = await query(
+    `SELECT listings.*, users.username AS seller_name
+     FROM listings
+     JOIN users ON listings.seller_id = users.id
+     ORDER BY listings.created_at DESC`
+  );
+  return { users, listings };
+}
+
 app.use(asyncHandler(async (req, res, next) => {
   await refreshUserSession(req, res);
   res.locals.currentPath = req.path;
   res.locals.isActivePath = (pathPrefix) => req.path === pathPrefix || req.path.startsWith(`${pathPrefix}/`);
+  res.locals.isAdmin = isAdminUser(res.locals.currentUser);
   next();
 }));
 
@@ -1540,9 +1589,12 @@ app.post(
       }
     }
 
-    let avatarUrl = currentProfile.avatar_url || null;
+    const clearAvatar = req.body.clear_avatar === 'true';
+    const clearBackground = req.body.clear_background === 'true';
+
+    let avatarUrl = clearAvatar ? null : currentProfile.avatar_url || null;
     const avatarFile = req.files?.avatar?.[0];
-    if (!error && avatarFile) {
+    if (!error && avatarFile && !clearAvatar) {
       try {
         avatarUrl = await uploadImage(avatarFile);
       } catch (uploadError) {
@@ -1550,9 +1602,9 @@ app.post(
       }
     }
 
-    let backgroundUrl = currentProfile.profile_background_url || null;
+    let backgroundUrl = clearBackground ? null : currentProfile.profile_background_url || null;
     const backgroundFile = req.files?.background?.[0];
-    if (!error && backgroundFile) {
+    if (!error && backgroundFile && !clearBackground) {
       try {
         backgroundUrl = await uploadImage(backgroundFile);
       } catch (uploadError) {
@@ -1560,7 +1612,7 @@ app.post(
       }
     }
 
-    const backgroundColorValue = profileBackgroundColor || null;
+    const backgroundColorValue = clearBackground ? null : profileBackgroundColor || null;
 
     if (!error) {
       await query(
@@ -1673,6 +1725,136 @@ app.post(
 
     const { user, listings } = await getSettingsPayload(res.locals.currentUser.id);
     res.render('pages/settings', { user, listings, formatPrice, error, success });
+  })
+);
+
+app.get(
+  '/dashboard',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const { users, listings } = await getAdminDashboardPayload();
+    res.render('pages/admin-dashboard', { users, listings, formatPrice, error: null, success: null });
+  })
+);
+
+app.post(
+  '/dashboard/users/:id/update',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).render('pages/error', { message: 'Invalid user id.' });
+    }
+
+    const username = (req.body.username || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const password = req.body.password || '';
+
+    let error = null;
+    const updates = [];
+    const values = [];
+
+    if (username) {
+      const { rows: existingUsers } = await query(
+        'SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2 LIMIT 1',
+        [username, userId]
+      );
+      if (existingUsers.length) {
+        error = 'That username is already in use.';
+      } else {
+        values.push(username);
+        updates.push(`username = $${values.length}`);
+      }
+    }
+
+    if (!error && email) {
+      if (!isValidEmail(email)) {
+        error = 'Please enter a valid email.';
+      } else {
+        const { rows: existingEmails } = await query(
+          'SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id != $2 LIMIT 1',
+          [email, userId]
+        );
+        if (existingEmails.length) {
+          error = 'That email is already in use.';
+        } else {
+          values.push(email);
+          updates.push(`email = $${values.length}`);
+        }
+      }
+    }
+
+    if (!error && password) {
+      if (password.length < 8) {
+        error = 'Password must be at least 8 characters.';
+      } else {
+        const passwordHash = await bcrypt.hash(password, 10);
+        values.push(passwordHash);
+        updates.push(`password_hash = $${values.length}`);
+      }
+    }
+
+    if (!error && updates.length === 0) {
+      error = 'Provide at least one field to update.';
+    }
+
+    if (error) {
+      const { users, listings } = await getAdminDashboardPayload();
+      return res.render('pages/admin-dashboard', { users, listings, formatPrice, error, success: null });
+    }
+
+    values.push(userId);
+    await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${values.length}`, values);
+    return res.redirect('/dashboard');
+  })
+);
+
+app.post(
+  '/dashboard/users/:id/delete',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) {
+      return res.status(400).render('pages/error', { message: 'Invalid user id.' });
+    }
+    const { rows } = await query('SELECT username, email FROM users WHERE id = $1', [userId]);
+    const targetUser = rows[0];
+    if (!targetUser) {
+      return res.status(404).render('pages/error', { message: 'User not found.' });
+    }
+    if (isAdminUser(targetUser)) {
+      const { users, listings } = await getAdminDashboardPayload();
+      return res.render('pages/admin-dashboard', {
+        users,
+        listings,
+        formatPrice,
+        error: 'The primary admin account cannot be deleted.',
+        success: null
+      });
+    }
+    await query('DELETE FROM users WHERE id = $1', [userId]);
+    return res.redirect('/dashboard');
+  })
+);
+
+app.post(
+  '/dashboard/listings/:id/delete',
+  requireAuth,
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const listingId = Number(req.params.id);
+    if (!Number.isInteger(listingId)) {
+      return res.status(400).render('pages/error', { message: 'Invalid listing id.' });
+    }
+    const { rows } = await query('SELECT id FROM listings WHERE id = $1', [listingId]);
+    if (!rows[0]) {
+      return res.status(404).render('pages/error', { message: 'Listing not found.' });
+    }
+    await query('DELETE FROM listings WHERE id = $1', [listingId]);
+    return res.redirect('/dashboard');
   })
 );
 

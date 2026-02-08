@@ -10,7 +10,7 @@
 
   <% const isWhite = match.white_player_id === currentUser.id; %>
   <% const yourColor = isWhite ? 'White' : 'Black'; %>
-  <% const turnLabel = isWhite ? 'White to move (your move)' : 'White to move (opponent)'; %>
+  <% const turnLabel = 'White to move'; %>
 
   <div class="chess-match-layout">
     <div class="chess-match-panel">
@@ -25,7 +25,7 @@
         </div>
         <div>
           <span class="label">Turn</span>
-          <p class="chess-chip neutral" id="turnStatus"><%= turnLabel %></p>
+          <p class="chess-chip neutral"><%= turnLabel %></p>
         </div>
       </div>
       <div class="chess-legend">
