@@ -396,7 +396,7 @@ img {
   font-size: 3rem;
   font-weight: 900;
   font-family: 'Space Mono', monospace;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 0 0 6px var(--card), var(--shadow-lg);
   border: 2px solid var(--primary);
   position: relative;
@@ -406,6 +406,44 @@ img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile-preview .preview-clear {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  opacity: 0.85;
+  z-index: 2;
+}
+
+.profile-preview .preview-clear:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+}
+
+.profile-preview .preview-clear:focus-visible {
+  outline: 2px solid rgba(124, 92, 255, 0.7);
+  outline-offset: 2px;
+}
+
+.profile-preview .preview-clear-avatar {
+  top: -14px;
+  right: -14px;
 }
 
 .profile-preview .preview-clear {
