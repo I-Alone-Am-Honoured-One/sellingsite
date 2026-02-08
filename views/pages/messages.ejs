@@ -15,15 +15,12 @@
         </div>
       <% } %>
       <% threads.forEach(thread => { %>
+        <% const recipientName = thread.buyer_id === currentUser.id ? thread.seller_name : thread.buyer_name; %>
         <a class="thread-item" href="/messages/<%= thread.id %>">
-          <% if (thread.listing_image) { %>
-            <img src="<%= thread.listing_image %>" alt="<%= thread.listing_title || 'Listing image' %>" />
-          <% } else { %>
-            <div class="thread-placeholder">💬</div>
-          <% } %>
+          <div class="thread-placeholder">💬</div>
           <div class="thread-summary">
             <div class="thread-title">
-              <h3><%= thread.listing_title || 'General inquiry' %></h3>
+              <h3><%= recipientName %></h3>
               <% if (Number(thread.unread_count) > 0) { %>
                 <span class="badge accent"><%= thread.unread_count %> unread</span>
               <% } %>

@@ -1,0 +1,89 @@
+<%- include('../partials/header') %>
+<section class="container section">
+  <div class="section-header">
+    <div>
+      <h1>Chess lounge</h1>
+      <p class="muted">Invite friends and keep track of your active matches.</p>
+    </div>
+  </div>
+
+  <div class="chess-grid">
+    <form class="form-card chess-card" method="POST" action="/chess/invite">
+      <h3>Invite a player</h3>
+      <label>
+        Username
+        <input type="text" name="username" placeholder="Enter a username" required />
+        <span class="helper">We’ll send a chess invite to this account.</span>
+      </label>
+      <div class="settings-actions">
+        <button class="button primary" type="submit">Send invite</button>
+      </div>
+    </form>
+
+    <div class="form-card chess-card">
+      <h3>Incoming invites</h3>
+      <% if (incomingInvites.length) { %>
+        <div class="chess-list">
+          <% incomingInvites.forEach(invite => { %>
+            <div class="chess-row">
+              <div>
+                <strong><%= invite.inviter_name %></strong>
+                <p class="muted">Invited you to play.</p>
+              </div>
+              <div class="chess-actions">
+                <form method="POST" action="/chess/invite/<%= invite.id %>/accept">
+                  <button class="button primary small" type="submit">Accept</button>
+                </form>
+                <form method="POST" action="/chess/invite/<%= invite.id %>/decline">
+                  <button class="button ghost small" type="submit">Decline</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p class="muted">No pending invites yet.</p>
+      <% } %>
+    </div>
+
+    <div class="form-card chess-card">
+      <h3>Outgoing invites</h3>
+      <% if (outgoingInvites.length) { %>
+        <div class="chess-list">
+          <% outgoingInvites.forEach(invite => { %>
+            <div class="chess-row">
+              <div>
+                <strong><%= invite.invitee_name %></strong>
+                <p class="muted">Waiting for a response.</p>
+              </div>
+              <span class="badge ghost">Pending</span>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p class="muted">No outgoing invites.</p>
+      <% } %>
+    </div>
+
+    <div class="form-card chess-card">
+      <h3>Active matches</h3>
+      <% if (matches.length) { %>
+        <div class="chess-list">
+          <% matches.forEach(match => { %>
+            <% const opponent = match.white_player_id === currentUser.id ? match.black_name : match.white_name; %>
+            <div class="chess-row">
+              <div>
+                <strong>vs <%= opponent %></strong>
+                <p class="muted">Match #<%= match.id %></p>
+              </div>
+              <a class="button ghost small" href="/chess/<%= match.id %>">Open board</a>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p class="muted">No active matches yet.</p>
+      <% } %>
+    </div>
+  </div>
+</section>
+<%- include('../partials/footer') %>
