@@ -179,6 +179,24 @@
         if (piece) {
           square.textContent = pieces[piece];
           square.classList.add('occupied');
+          const color = pieceColor(piece);
+          if (color === 'w') {
+            square.classList.add('piece-white');
+          } else if (color === 'b') {
+            square.classList.add('piece-black');
+          }
+        }
+        if (col === 0) {
+          const rankLabel = document.createElement('span');
+          rankLabel.className = 'board-label rank';
+          rankLabel.textContent = `${8 - row}`;
+          square.appendChild(rankLabel);
+        }
+        if (row === 7) {
+          const fileLabel = document.createElement('span');
+          fileLabel.className = 'board-label file';
+          fileLabel.textContent = String.fromCharCode(97 + col);
+          square.appendChild(fileLabel);
         }
         square.addEventListener('click', () => selectSquare(row, col));
         boardEl.appendChild(square);
