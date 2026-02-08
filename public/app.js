@@ -1,5 +1,30 @@
 // Profile menu dropdown handling
 document.addEventListener('DOMContentLoaded', () => {
+  const siteLoader = document.querySelector('.site-loader');
+  if (siteLoader) {
+    const introShown = sessionStorage.getItem('sellar_intro_shown') === 'true';
+    if (introShown) {
+      siteLoader.remove();
+    } else {
+      sessionStorage.setItem('sellar_intro_shown', 'true');
+      const hideIntro = () => {
+        siteLoader.classList.add('is-hidden');
+        siteLoader.addEventListener('transitionend', () => {
+          siteLoader.remove();
+        }, { once: true });
+
+        setTimeout(() => {
+          if (siteLoader.isConnected) {
+            siteLoader.remove();
+          }
+        }, 1400);
+      };
+
+      window.addEventListener('load', hideIntro, { once: true });
+      setTimeout(hideIntro, 2200);
+    }
+  }
+
   // Desktop profile menu
   const profileMenus = document.querySelectorAll('.profile-menu');
   profileMenus.forEach(menu => {
