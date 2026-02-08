@@ -1,5 +1,21 @@
 // Profile menu dropdown handling
 document.addEventListener('DOMContentLoaded', () => {
+  const siteLoader = document.querySelector('.site-loader');
+  if (siteLoader) {
+    window.addEventListener('load', () => {
+      siteLoader.classList.add('is-hidden');
+      siteLoader.addEventListener('transitionend', () => {
+        siteLoader.remove();
+      }, { once: true });
+
+      setTimeout(() => {
+        if (siteLoader.isConnected) {
+          siteLoader.remove();
+        }
+      }, 1200);
+    }, { once: true });
+  }
+
   // Desktop profile menu
   const profileMenus = document.querySelectorAll('.profile-menu');
   profileMenus.forEach(menu => {
